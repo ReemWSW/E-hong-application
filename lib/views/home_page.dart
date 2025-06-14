@@ -18,6 +18,10 @@ class HomePage extends StatelessWidget {
             icon: Icon(Icons.logout),
             onPressed: () => authController.logout(),
           ),
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: btController.startScan,
+          ),
         ],
       ),
       body: Obx(() {
@@ -175,70 +179,6 @@ class HomePage extends StatelessWidget {
                   
                   SizedBox(height: 20),
                   
-                  // ปุ่มควบคุมอุปกรณ์เพิ่มเติม
-                  Text(
-                    "🔧 ควบคุมอุปกรณ์:",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  
-                  SizedBox(height: 10),
-                  
-                  // Row(
-                  //   children: [
-                  //     Expanded(
-                  //       child: ElevatedButton.icon(
-                  //         onPressed: btController.sendAcknowledge,
-                  //         icon: Icon(Icons.check, size: 16),
-                  //         label: Text(
-                  //           "📨 ACK",
-                  //           style: TextStyle(fontSize: 12),
-                  //         ),
-                  //         style: ElevatedButton.styleFrom(
-                  //           backgroundColor: Colors.teal,
-                  //           foregroundColor: Colors.white,
-                  //           padding: EdgeInsets.symmetric(vertical: 8),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //     SizedBox(width: 8),
-                  //     Expanded(
-                  //       child: ElevatedButton.icon(
-                  //         onPressed: btController.sendComplete,
-                  //         icon: Icon(Icons.done_all, size: 16),
-                  //         label: Text(
-                  //           "✅ DONE",
-                  //           style: TextStyle(fontSize: 12),
-                  //         ),
-                  //         style: ElevatedButton.styleFrom(
-                  //           backgroundColor: Colors.green[600],
-                  //           foregroundColor: Colors.white,
-                  //           padding: EdgeInsets.symmetric(vertical: 8),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //     SizedBox(width: 8),
-                  //     Expanded(
-                  //       child: ElevatedButton.icon(
-                  //         onPressed: btController.sendStop,
-                  //         icon: Icon(Icons.stop, size: 16),
-                  //         label: Text(
-                  //           "🛑 STOP",
-                  //           style: TextStyle(fontSize: 12),
-                  //         ),
-                  //         style: ElevatedButton.styleFrom(
-                  //           backgroundColor: Colors.red[600],
-                  //           foregroundColor: Colors.white,
-                  //           padding: EdgeInsets.symmetric(vertical: 8),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
-                  
                   // คำแนะนำ
                   Container(
                     padding: EdgeInsets.all(12),
@@ -358,32 +298,52 @@ class HomePage extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.bluetooth_disabled,
+                                  btController.isConnecting.value 
+                                      ? Icons.bluetooth_searching
+                                      : Icons.bluetooth_disabled,
                                   size: 48,
-                                  color: Colors.grey,
+                                  color: btController.isConnecting.value 
+                                      ? Colors.orange
+                                      : Colors.grey,
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  "ไม่พบอุปกรณ์",
+                                  btController.isConnecting.value 
+                                      ? "กำลังค้นหา..."
+                                      : "ไม่พบอุปกรณ์",
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Colors.grey[600],
+                                    color: btController.isConnecting.value 
+                                        ? Colors.orange[600]
+                                        : Colors.grey[600],
                                   ),
                                 ),
-                                SizedBox(height: 8),
-                                Text(
-                                  "ลากลงเพื่อรีเฟรช",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
+                                if (!btController.isConnecting.value) ...[
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "ลากลงเพื่อรีเฟรช",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
                                   ),
-                                ),
-                                SizedBox(height: 16),
-                                TextButton.icon(
-                                  onPressed: btController.startScan,
-                                  icon: Icon(Icons.refresh),
-                                  label: Text("ค้นหาใหม่"),
-                                ),
+                                  SizedBox(height: 16),
+                                  TextButton.icon(
+                                    onPressed: btController.startScan,
+                                    icon: Icon(Icons.refresh),
+                                    label: Text("ค้นหาใหม่"),
+                                  ),
+                                ],
+                                if (btController.isConnecting.value) ...[
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "กรุณารอสักครู่...",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.orange[500],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

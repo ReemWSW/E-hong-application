@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -161,15 +162,6 @@ class BluetoothController extends GetxController {
         } else if (responseCommand == 0x99) {
           // ตอบกลับจากคำสั่งทดสอบ
           _handleTestResponse("Test Command (0x99)", responseCommand);
-        } else if (responseCommand == 0xFF) {
-          // ตอบกลับจากคำสั่ง Acknowledge
-          _handleAckResponse("Acknowledge (0xFF)", responseCommand);
-        } else if (responseCommand == 0x00) {
-          // ตอบกลับจากคำสั่ง Complete
-          _handleCompleteResponse("Complete (0x00)", responseCommand);
-        } else if (responseCommand == 0xEE) {
-          // ตอบกลับจากคำสั่ง Stop
-          _handleStopResponse("Stop (0xEE)", responseCommand);
         } else {
           // คำสั่งอื่นๆ
           _handleGeneralResponse("Unknown Command", responseCommand);
@@ -233,14 +225,14 @@ class BluetoothController extends GetxController {
     isWaitingResponse.value = false;
     _responseTimeout?.cancel();
     
-    // Get.snackbar(
-    //   "⚡ Activate สำเร็จ",
-    //   "✅ อุปกรณ์ตอบกลับคำสั่ง Activate Now แล้ว\n($responseType)\n💡 ลองกดปุ่ม ACK, DONE หรือ STOP",
-    //   backgroundColor: Colors.purple.withOpacity(0.8),
-    //   colorText: Colors.white,
-    //   duration: Duration(seconds: 5),
-    //   snackPosition: SnackPosition.BOTTOM,
-    // );
+    Get.snackbar(
+      "⚡ Activate สำเร็จ",
+      "✅ อุปกรณ์ตอบกลับคำสั่ง Activate Now แล้ว\n($responseType)",
+      backgroundColor: Colors.purple.withOpacity(0.8),
+      colorText: Colors.white,
+      duration: Duration(seconds: 3),
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
   
   // ฟังก์ชันจัดการการตอบกลับจากคำสั่งทดสอบ
@@ -271,51 +263,6 @@ class BluetoothController extends GetxController {
       backgroundColor: Colors.teal.withOpacity(0.8),
       colorText: Colors.white,
       duration: Duration(seconds: 3),
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
-  
-  // ฟังก์ชันจัดการการตอบกลับจาก Acknowledge
-  void _handleAckResponse(String responseType, int commandByte) {
-    isWaitingResponse.value = false;
-    _responseTimeout?.cancel();
-    
-    Get.snackbar(
-      "📨 ACK รับทราบ",
-      "✅ อุปกรณ์รับทราบคำสั่ง Acknowledge",
-      backgroundColor: Colors.teal.withOpacity(0.8),
-      colorText: Colors.white,
-      duration: Duration(seconds: 2),
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
-  
-  // ฟังก์ชันจัดการการตอบกลับจาก Complete
-  void _handleCompleteResponse(String responseType, int commandByte) {
-    isWaitingResponse.value = false;
-    _responseTimeout?.cancel();
-    
-    Get.snackbar(
-      "✅ Complete รับทราบ",
-      "✅ อุปกรณ์รับทราบสัญญาณเสร็จสิ้น",
-      backgroundColor: Colors.green.withOpacity(0.8),
-      colorText: Colors.white,
-      duration: Duration(seconds: 2),
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
-  
-  // ฟังก์ชันจัดการการตอบกลับจาก Stop
-  void _handleStopResponse(String responseType, int commandByte) {
-    isWaitingResponse.value = false;
-    _responseTimeout?.cancel();
-    
-    Get.snackbar(
-      "🛑 Stop รับทราบ",
-      "✅ อุปกรณ์หยุดการทำงานแล้ว",
-      backgroundColor: Colors.red.withOpacity(0.8),
-      colorText: Colors.white,
-      duration: Duration(seconds: 2),
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -471,22 +418,145 @@ class BluetoothController extends GetxController {
   void activateConnect() {
     isConnectResponseReceived.value = false;
     canActivate.value = false;
-    sendCommand(0x01, successMessage: "🔌 ส่งคำสั่ง Activate Connect แล้ว กรุณารอการตอบกลับ...");
+    sendActivateConnectCommand();
   }
 
-  // ฟังก์ชันสำหรับส่งคำสั่งยืนยัน
-  void sendAcknowledge() {
-    sendCommand(0xFF, successMessage: "📨 ส่งยืนยันการรับข้อมูล (ACK)");
-  }
-  
-  // ฟังก์ชันสำหรับส่งคำสั่งเสร็จสิ้น
-  void sendComplete() {
-    sendCommand(0x00, successMessage: "✅ ส่งสัญญาณเสร็จสิ้น (COMPLETE)");
-  }
-  
-  // ฟังก์ชันสำหรับหยุดการทำงานของอุปกรณ์
-  void sendStop() {
-    sendCommand(0xEE, successMessage: "🛑 ส่งคำสั่งหยุด (STOP)");
+  // ฟังก์ชันส่งคำสั่ง Activate Connect แบบง่าย (ตาม Java code)
+  void sendActivateConnectCommand() {
+    // ตรวจสอบการเชื่อมต่อ Bluetooth อย่างละเอียด
+    if (bluetoothService.connection == null || !bluetoothService.connection!.isConnected) {
+      Get.snackbar(
+        "❌ ยังไม่ได้เชื่อมต่อ", 
+        "กรุณาเชื่อมต่อกับอุปกรณ์ก่อนส่งคำสั่ง",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // ตรวจสอบสถานะการเชื่อมต่อเพิ่มเติม
+    if (!isConnected.value) {
+      Get.snackbar(
+        "❌ การเชื่อมต่อขาดหาย", 
+        "การเชื่อมต่อ Bluetooth หลุด กรุณาเชื่อมต่อใหม่",
+        backgroundColor: Colors.orange.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      isConnected.value = false;
+      selectedDevice.value = null;
+      return;
+    }
+
+    // ป้องกันการส่งคำสั่งซ้ำๆ
+    if (isWaitingResponse.value) {
+      Get.snackbar(
+        "⏳ กำลังรอการตอบกลับ",
+        "กรุณารอให้คำสั่งก่อนหน้าเสร็จสิ้นก่อน",
+        backgroundColor: Colors.orange.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 2),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      List<int> packet = List.filled(64, 0);
+
+      // Header (ตาม Java code)
+      packet[0] = 0xA1;
+      packet[1] = 0x11;
+      packet[2] = 0xF1;
+      packet[3] = 0x01; // Activate Connect command
+
+      // ไม่มีการเข้ารหัสสำหรับ Connect command (bytes 4-61 = 0)
+
+      // Checksum (sum of bytes 0-61)
+      int checksum = 0;
+      for (int i = 0; i < 62; i++) {
+        checksum += packet[i];
+      }
+      packet[62] = checksum & 0xFF;
+
+      // End byte
+      packet[63] = 0xE1;
+
+      // เก็บข้อมูลคำสั่งที่ส่งไป
+      lastCommandSent.value = 0x01;
+      isWaitingResponse.value = true;
+
+      print("Sending Activate Connect command (simple packet)");
+
+      // ตั้ง timeout
+      _responseTimeout?.cancel();
+      _responseTimeout = Timer(Duration(seconds: 10), () {
+        if (isWaitingResponse.value) {
+          isWaitingResponse.value = false;
+          Get.snackbar(
+            "⏰ หมดเวลารอ",
+            "❌ ไม่ได้รับการตอบกลับจากอุปกรณ์\nลองส่งคำสั่งใหม่อีกครั้ง",
+            backgroundColor: Colors.red.withOpacity(0.8),
+            colorText: Colors.white,
+            duration: Duration(seconds: 4),
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      });
+
+      // ส่งข้อมูล
+      bluetoothService.connection!.output.add(Uint8List.fromList(packet));
+      bluetoothService.connection!.output.allSent.then((_) {
+        print("Sent Activate Connect command");
+        
+        Get.snackbar(
+          "📤 ส่งคำสั่งแล้ว", 
+          "🔌 ส่งคำสั่ง Activate Connect แล้ว กรุณารอการตอบกลับ...",
+          backgroundColor: Colors.blue.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 2),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }).catchError((error) {
+        isWaitingResponse.value = false;
+        _responseTimeout?.cancel();
+        
+        print("Error sending Activate Connect command: $error");
+        
+        Get.snackbar(
+          "❌ ส่งคำสั่งไม่สำเร็จ", 
+          "ไม่สามารถส่งคำสั่งได้: $error\nลองเชื่อมต่อใหม่",
+          backgroundColor: Colors.red.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 4),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        
+        isConnected.value = false;
+        selectedDevice.value = null;
+      });
+      
+    } catch (e) {
+      isWaitingResponse.value = false;
+      _responseTimeout?.cancel();
+      
+      print("Exception in sendActivateConnectCommand: $e");
+      
+      Get.snackbar(
+        "❌ เกิดข้อผิดพลาด", 
+        "ไม่สามารถส่งคำสั่งได้: $e",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      
+      isConnected.value = false;
+      selectedDevice.value = null;
+    }
   }
 
   // ฟังก์ชันสำหรับรีเซ็ตสถานะการรอ (public)
@@ -523,7 +593,160 @@ class BluetoothController extends GetxController {
       );
       return;
     }
-    sendCommand(0x02, successMessage: "⚡ ส่งคำสั่ง Activate Now แล้ว");
+    sendActivateNowCommand();
+  }
+
+  // ฟังก์ชันส่งคำสั่ง Activate Now แบบเข้ารหัส (ตาม Java code)
+  void sendActivateNowCommand() {
+    // ตรวจสอบการเชื่อมต่อ Bluetooth อย่างละเอียด
+    if (bluetoothService.connection == null || !bluetoothService.connection!.isConnected) {
+      Get.snackbar(
+        "❌ ยังไม่ได้เชื่อมต่อ", 
+        "กรุณาเชื่อมต่อกับอุปกรณ์ก่อนส่งคำสั่ง",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // ตรวจสอบสถานะการเชื่อมต่อเพิ่มเติม
+    if (!isConnected.value) {
+      Get.snackbar(
+        "❌ การเชื่อมต่อขาดหาย", 
+        "การเชื่อมต่อ Bluetooth หลุด กรุณาเชื่อมต่อใหม่",
+        backgroundColor: Colors.orange.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      isConnected.value = false;
+      selectedDevice.value = null;
+      return;
+    }
+
+    // ป้องกันการส่งคำสั่งซ้ำๆ
+    if (isWaitingResponse.value) {
+      Get.snackbar(
+        "⏳ กำลังรอการตอบกลับ",
+        "กรุณารอให้คำสั่งก่อนหน้าเสร็จสิ้นก่อน",
+        backgroundColor: Colors.orange.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 2),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      List<int> packet = List.filled(64, 0);
+
+      // Header (ตาม Java code)
+      packet[0] = 0xA1;
+      packet[1] = 0x11;
+      packet[2] = 0xF1;
+      packet[3] = 0x02; // Activate Now command
+
+      // สร้าง Random HEX (ตาม Java code)
+      Random random = Random();
+      int hexIn = random.nextInt(9000) + 1000; // 1000-9999
+      
+      int hexA = hexIn * 8;
+      int hexB = hexIn * 16;
+      int hexS = (hexA + hexB) & 0xFFFFFFFF;
+      hexS = (~hexS + 1) & 0xFFFFFFFF; // Two's complement
+
+      // ใส่ข้อมูลเข้ารหัส (bytes 4-9)
+      packet[4] = (hexS >> 24) & 0xFF;
+      packet[5] = (hexS >> 16) & 0xFF;
+      packet[6] = (hexS >> 8) & 0xFF;
+      packet[7] = hexS & 0xFF;
+      packet[8] = (hexIn >> 8) & 0xFF;
+      packet[9] = hexIn & 0xFF;
+
+      // Checksum (sum of bytes 0-61)
+      int checksum = 0;
+      for (int i = 0; i < 62; i++) {
+        checksum += packet[i];
+      }
+      packet[62] = checksum & 0xFF;
+
+      // End byte
+      packet[63] = 0xE1;
+
+      // เก็บข้อมูลคำสั่งที่ส่งไป
+      lastCommandSent.value = 0x02;
+      isWaitingResponse.value = true;
+
+      print("Sending Activate Now with HEX_IN: $hexIn, HEXS: ${hexS.toRadixString(16).padLeft(8, '0').toUpperCase()}");
+
+      // ตั้ง timeout
+      _responseTimeout?.cancel();
+      _responseTimeout = Timer(Duration(seconds: 10), () {
+        if (isWaitingResponse.value) {
+          isWaitingResponse.value = false;
+          Get.snackbar(
+            "⏰ หมดเวลารอ",
+            "❌ ไม่ได้รับการตอบกลับจากอุปกรณ์\nลองส่งคำสั่งใหม่อีกครั้ง",
+            backgroundColor: Colors.red.withOpacity(0.8),
+            colorText: Colors.white,
+            duration: Duration(seconds: 4),
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      });
+
+      // ส่งข้อมูล
+      bluetoothService.connection!.output.add(Uint8List.fromList(packet));
+      bluetoothService.connection!.output.allSent.then((_) {
+        print("Sent Activate Now command with encryption");
+        
+        Get.snackbar(
+          "📤 ส่งคำสั่งแล้ว", 
+          "⚡ ส่งคำสั่ง Activate Now แล้ว (เข้ารหัส)",
+          backgroundColor: Colors.blue.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 2),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }).catchError((error) {
+        isWaitingResponse.value = false;
+        _responseTimeout?.cancel();
+        
+        print("Error sending Activate Now command: $error");
+        
+        Get.snackbar(
+          "❌ ส่งคำสั่งไม่สำเร็จ", 
+          "ไม่สามารถส่งคำสั่งได้: $error\nลองเชื่อมต่อใหม่",
+          backgroundColor: Colors.red.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 4),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        
+        isConnected.value = false;
+        selectedDevice.value = null;
+      });
+      
+    } catch (e) {
+      isWaitingResponse.value = false;
+      _responseTimeout?.cancel();
+      
+      print("Exception in sendActivateNowCommand: $e");
+      
+      Get.snackbar(
+        "❌ เกิดข้อผิดพลาด", 
+        "ไม่สามารถส่งคำสั่งได้: $e",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      
+      isConnected.value = false;
+      selectedDevice.value = null;
+    }
   }
 
   void disconnect() async {
