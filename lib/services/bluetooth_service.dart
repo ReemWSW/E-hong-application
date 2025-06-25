@@ -1,16 +1,17 @@
 import 'dart:typed_data';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter_blue_classic/flutter_blue_classic.dart';
 
 class BluetoothService {
-  final FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
+  final FlutterBlueClassic _bluetooth = FlutterBlueClassic();
   BluetoothConnection? connection;
 
   Future<List<BluetoothDevice>> getBondedDevices() async {
-    return await _bluetooth.getBondedDevices();
+    final bonded = await _bluetooth.bondedDevices;
+    return bonded ?? [];
   }
 
   Future<void> connect(BluetoothDevice device) async {
-    connection = await BluetoothConnection.toAddress(device.address);
+    connection = await _bluetooth.connect(device.address);
   }
 
   void send(String message) {

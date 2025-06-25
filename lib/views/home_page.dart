@@ -71,10 +71,11 @@ class HomePage extends StatelessWidget {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          "สถานะ: ${btController.bluetoothService.connection?.isConnected == true ? 'เชื่อมต่อแล้ว' : 'ไม่ได้เชื่อมต่อ'}",
+                         "สถานะ: ${btController.connection?.isConnected == true ? 'เชื่อมต่อแล้ว' : 'ไม่ได้เชื่อมต่อ'}",
+
                           style: TextStyle(
                             fontSize: 12,
-                            color: btController.bluetoothService.connection?.isConnected == true 
+                            color: btController.connection?.isConnected == true 
                                 ? Colors.green[600] 
                                 : Colors.red[600],
                           ),
@@ -215,7 +216,7 @@ class HomePage extends StatelessWidget {
                   
                   // ปุ่มตัดการเชื่อมต่อ
                   TextButton.icon(
-                    onPressed: btController.disconnect,
+                   onPressed: () async => await btController.disconnect(),
                     icon: Icon(Icons.bluetooth_disabled, color: Colors.red),
                     label: Text(
                       "ตัดการเชื่อมต่อ",
