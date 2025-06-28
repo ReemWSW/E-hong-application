@@ -1,3 +1,4 @@
+// lib/views/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
@@ -10,12 +11,14 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  final emailController = TextEditingController();
+  final employeeNoController = TextEditingController();
   final passwordController = TextEditingController();
+  final companyController = TextEditingController();
   final AuthController authController = Get.find();
 
-  String? emailError;
+  String? employeeNoError;
   String? passwordError;
+  String? companyError;
   bool _obscureText = true;
   bool _isRegisterMode = false;
 
@@ -61,60 +64,60 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     if (_animationsInitialized) {
       _animationController.dispose();
     }
-    emailController.dispose();
+    employeeNoController.dispose();
     passwordController.dispose();
+    companyController.dispose();
     super.dispose();
-  }
-
-  bool isValidEmail(String email) {
-    return GetUtils.isEmail(email);
-  }
-
-  bool isValidPassword(String password) {
-    return password.length >= 6;
   }
 
   bool validate() {
     setState(() {
-      emailError = null;
+      employeeNoError = null;
       passwordError = null;
+      companyError = null;
     });
 
-    final email = emailController.text.trim();
+    final employeeNo = employeeNoController.text.trim();
     final password = passwordController.text.trim();
+    final company = companyController.text.trim();
 
     bool hasError = false;
 
-    if (!isValidEmail(email)) {
-      emailError = "กรุณากรอกอีเมลให้ถูกต้อง เช่น name@example.com";
+    if (employeeNo.isEmpty) {
+      employeeNoError = "กรุณากรอกหมายเลขพนักงาน";
       hasError = true;
     }
 
-    if (!isValidPassword(password)) {
+    // ตรวจสอบ company เฉพาะตอนสมัคร
+    if (_isRegisterMode && company.isEmpty) {
+      companyError = "กรุณากรอกชื่อบริษัท";
+      hasError = true;
+    }
+
+    if (password.length < 6) {
       passwordError = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
       hasError = true;
     }
 
-    return hasError;
+    return !hasError;
   }
 
   void validateAndLogin() {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    if (!validate()) {
-      authController.login(email, password);
-    } else {
-      setState(() {});
+    if (validate()) {
+      authController.login(
+        employeeNo: employeeNoController.text.trim(),
+        password: passwordController.text.trim(),
+      );
     }
   }
 
   void validateAndRegister() {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    if (!validate()) {
-      authController.register(email, password);
-    } else {
-      setState(() {});
+    if (validate()) {
+      authController.register(
+        employeeNo: employeeNoController.text.trim(),
+        password: passwordController.text.trim(),
+        company: companyController.text.trim(),
+      );
     }
   }
 
@@ -168,7 +171,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   Widget _buildPrimaryButton({
     required String text,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required Color color,
     required IconData icon,
   }) {
@@ -238,14 +241,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             // Header Section
                             Column(
                               children: [
-                                SizedBox(
-                                  width: 80,
-                                  height: 80,
-                                  child: Image.asset("assets/logo.png")
+                                Icon(
+                                  Icons.access_time,
+                                  size: 80,
+                                  color: Colors.blue[600],
                                 ),
                                 SizedBox(height: 24),
                                 Text(
-                                  _isRegisterMode ? "สร้างบัญชีใหม่" : "ยินดีต้อนรับ",
+                                  _isRegisterMode ? "ลงทะเบียนพนักงาน" : "ระบบลงเวลาทำงาน",
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -255,8 +258,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 SizedBox(height: 8),
                                 Text(
                                   _isRegisterMode 
-                                    ? "สร้างบัญชีเพื่อเข้าใช้งานระบบ" 
-                                    : "เข้าสู่ระบบเพื่อใช้งานแอปพลิเคชัน",
+                                    ? "สร้างบัญชีพนักงานใหม่" 
+                                    : "เข้าสู่ระบบเพื่อลงเวลาทำงาน",
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -270,11 +273,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             
                             // Form Section
                             _buildTextField(
-                              controller: emailController,
-                              label: "อีเมล",
-                              icon: Icons.email_outlined,
-                              errorText: emailError,
+                              controller: employeeNoController,
+                              label: "หมายเลขพนักงาน",
+                              icon: Icons.badge,
+                              errorText: employeeNoError,
                             ),
+                            
+                            // Company field - แสดงเฉพาะตอนสมัคร
+                            if (_isRegisterMode)
+                              _buildTextField(
+                                controller: companyController,
+                                label: "ชื่อบริษัท",
+                                icon: Icons.business,
+                                errorText: companyError,
+                              ),
                             
                             _buildTextField(
                               controller: passwordController,
@@ -298,12 +310,45 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             SizedBox(height: 8),
                             
                             // Primary Action Button
-                            _buildPrimaryButton(
-                              text: _isRegisterMode ? "สร้างบัญชี" : "เข้าสู่ระบบ",
-                              onPressed: _isRegisterMode ? validateAndRegister : validateAndLogin,
+                            Obx(() => _buildPrimaryButton(
+                              text: authController.isLoading.value 
+                                  ? "กำลังดำเนินการ..." 
+                                  : _isRegisterMode ? "ลงทะเบียน" : "เข้าสู่ระบบ",
+                              onPressed: authController.isLoading.value 
+                                  ? null 
+                                  : _isRegisterMode ? validateAndRegister : validateAndLogin,
                               color: _isRegisterMode ? Colors.green[600]! : Colors.blue[600]!,
-                              icon: _isRegisterMode ? Icons.person_add : Icons.login,
-                            ),
+                              icon: authController.isLoading.value
+                                  ? Icons.hourglass_empty
+                                  : _isRegisterMode ? Icons.person_add : Icons.login,
+                            )),
+                            
+                            if (!_isRegisterMode) ...[
+                              SizedBox(height: 12),
+                              Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "เข้าสู่ระบบจะบันทึกเวลาและตำแหน่งอัตโนมัติ",
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.blue[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             
                             SizedBox(height: 16),
                             
@@ -328,12 +373,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             SizedBox(height: 16),
                             
                             // Switch Mode Button
-                            TextButton(
+                                                          TextButton(
                               onPressed: () {
                                 setState(() {
                                   _isRegisterMode = !_isRegisterMode;
-                                  emailError = null;
+                                  employeeNoError = null;
                                   passwordError = null;
+                                  companyError = null;
+                                  // ล้างค่า company เมื่อเปลี่ยนไป login mode
+                                  if (!_isRegisterMode) {
+                                    companyController.clear();
+                                  }
                                 });
                               },
                               style: TextButton.styleFrom(
@@ -353,7 +403,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                     TextSpan(
-                                      text: _isRegisterMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่",
+                                      text: _isRegisterMode ? "เข้าสู่ระบบ" : "ลงทะเบียน",
                                       style: TextStyle(
                                         color: Colors.blue[600],
                                         fontWeight: FontWeight.w600,

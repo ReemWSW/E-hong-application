@@ -1,9 +1,9 @@
+import 'package:e_hong_app/views/home_page.dart';
+import 'package:e_hong_app/views/login_page.dart';
 import 'package:get/get.dart';
 
 import '../bindings/auth_binding.dart';
 import '../bindings/bluetooth_binding.dart';
-import '../views/home_page.dart';
-import '../views/login_page.dart';
 
 class AppPages {
   static const INITIAL = '/login';

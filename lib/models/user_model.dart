@@ -1,33 +1,81 @@
+// lib/models/user_model.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+
 class UserModel {
-  final String uid;
-  final String email;
-  // final String? name;
-  // final String? profileImageUrl;
+  final String? id;
+  final String employeeNo;
+  final String company;
+  final String passwordHash; // เก็บ password ที่เข้ารหัสแล้ว
+  final DateTime? createdAt;
+  final DateTime? lastLogin;
 
   UserModel({
-    required this.uid,
-    required this.email,
-    // this.name,
-    // this.profileImageUrl,
+    this.id,
+    required this.employeeNo,
+    required this.company,
+    required this.passwordHash,
+    this.createdAt,
+    this.lastLogin,
   });
 
-  // แปลงจาก Firestore document -> UserModel
-  factory UserModel.fromMap(Map<String, dynamic> map) {
+  // สร้าง hash จาก password
+  static String hashPassword(String password) {
+    var bytes = utf8.encode(password);
+    var digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> map, String id) {
     return UserModel(
-      uid: map['uid'],
-      email: map['email'],
-      // name: map['name'],
-      // profileImageUrl: map['profileImageUrl'],
+      id: id,
+      employeeNo: map['employeeNo'] ?? '',
+      company: map['company'] ?? '',
+      passwordHash: map['passwordHash'] ?? '',
+      createdAt: map['createdAt']?.toDate(),
+      lastLogin: map['lastLogin']?.toDate(),
     );
   }
 
-  // แปลงกลับเป็น Map สำหรับบันทึกเข้า Firestore
   Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'email': email,
-      // 'name': name,
-      // 'profileImageUrl': profileImageUrl,
+      'employeeNo': employeeNo,
+      'company': company,
+      'passwordHash': passwordHash,
+      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
     };
+  }
+
+  // สร้าง UserModel ใหม่พร้อม password hash
+  factory UserModel.create({
+    required String employeeNo,
+    required String password,
+    required String company,
+  }) {
+    return UserModel(
+      employeeNo: employeeNo,
+      company: company,
+      passwordHash: hashPassword(password),
+      createdAt: DateTime.now(),
+    );
+  }
+
+  // ตรวจสอบ password
+  bool verifyPassword(String password) {
+    return passwordHash == hashPassword(password);
+  }
+
+  // อัปเดต last login
+  UserModel copyWithLastLogin() {
+    return UserModel(
+      id: id,
+      employeeNo: employeeNo,
+      company: company,
+      passwordHash: passwordHash,
+      createdAt: createdAt,
+      lastLogin: DateTime.now(),
+    );
   }
 }

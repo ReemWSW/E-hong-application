@@ -1,66 +1,149 @@
+// lib/services/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
+import '../models/timestamp_model.dart';
 
 class FirebaseService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<User?> registerWithEmail(String email, String password) async {
+  // ลงทะเบียนพนักงานใหม่
+  Future<UserModel?> registerEmployee({
+    required String employeeNo,
+    required String password,
+    required String company,
+  }) async {
     try {
-      final result = await _auth.createUserWithEmailAndPassword(
-        email: email,
+      // ตรวจสอบว่ามีพนักงานหมายเลขนี้ในบริษัทนี้แล้วหรือไม่
+      final existingUser = await _firestore
+          .collection('employees')
+          .where('employeeNo', isEqualTo: employeeNo)
+          .where('company', isEqualTo: company)
+          .get();
+
+      if (existingUser.docs.isNotEmpty) {
+        throw Exception('พนักงานหมายเลข $employeeNo ในบริษัท $company มีอยู่แล้ว');
+      }
+
+      // สร้างพนักงานใหม่
+      UserModel newUser = UserModel.create(
+        employeeNo: employeeNo,
         password: password,
+        company: company,
       );
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseError(e);
+
+      // บันทึกลง Firestore
+      DocumentReference docRef = await _firestore
+          .collection('employees')
+          .add(newUser.toMap());
+
+      // ดึงข้อมูลที่บันทึกแล้วมาคืน
+      DocumentSnapshot doc = await docRef.get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('ลงทะเบียนไม่สำเร็จ: $e');
     }
   }
 
-  Future<User?> loginWithEmail(String email, String password) async {
+  // เข้าสู่ระบบ (ใช้เฉพาะ employeeNo + password)
+  Future<UserModel?> loginEmployee({
+    required String employeeNo,
+    required String password,
+  }) async {
     try {
-      final result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseError(e);
+      // ค้นหาพนักงานในฐานข้อมูล (ใช้เฉพาะ employeeNo)
+      final querySnapshot = await _firestore
+          .collection('employees')
+          .where('employeeNo', isEqualTo: employeeNo)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        throw Exception('ไม่พบพนักงานหมายเลข $employeeNo');
+      }
+
+      // ตรวจสอบว่ามีมากกว่า 1 พนักงานหรือไม่ (เผื่อมี employeeNo ซ้ำข้ามบริษัท)
+      if (querySnapshot.docs.length > 1) {
+        // ถ้ามีหลายคน ให้แสดงรายชื่อบริษัท
+        List<String> companies = querySnapshot.docs
+            .map((doc) => (doc.data() as Map<String, dynamic>)['company'] as String)
+            .toSet()
+            .toList();
+        
+        throw Exception('พบพนักงานหมายเลข $employeeNo ในหลายบริษัท: ${companies.join(", ")}\nกรุณาติดต่อผู้ดูแลระบบ');
+      }
+
+      // ได้ข้อมูลพนักงาน
+      DocumentSnapshot doc = querySnapshot.docs.first;
+      UserModel user = UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+
+      // ตรวจสอบรหัสผ่าน
+      if (!user.verifyPassword(password)) {
+        throw Exception('รหัสผ่านไม่ถูกต้อง');
+      }
+
+      // อัปเดต last login
+      UserModel updatedUser = user.copyWithLastLogin();
+      await _firestore
+          .collection('employees')
+          .doc(user.id!)
+          .update({'lastLogin': Timestamp.fromDate(DateTime.now())});
+
+      return updatedUser;
+    } catch (e) {
+      throw Exception('เข้าสู่ระบบไม่สำเร็จ: $e');
     }
   }
 
-  String _mapFirebaseError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'too-many-requests':
-        return 'บล็อกการใช้งานจากอุปกรณ์ของคุณชั่วคราว เนื่องจากตรวจพบ พฤติกรรมที่ผิดปกติ';
-      case 'invalid-credential':
-        return 'ข้อมูลลงชื่อเข้าใช้ไม่ถูกต้อง';
-      case 'invalid-email':
-        return 'รูปแบบอีเมลไม่ถูกต้อง';
-      case 'email-already-in-use':
-        return 'อีเมลนี้ถูกใช้งานไปแล้ว';
-      default:
-        return 'เกิดข้อผิดพลาด: ${e.message}';  // <-- สำคัญ
+  // บันทึกการลงเวลา
+  Future<void> saveTimestamp(TimestampModel timestamp) async {
+    await _firestore.collection('timestamps').add(timestamp.toMap());
+  }
+
+  // ดึงประวัติการลงเวลา (แบบไม่ต้อง index)
+  Stream<List<TimestampModel>> getTimestamps(String userId) {
+    return _firestore
+        .collection('timestamps')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          // Sort ใน client แทนที่จะใช้ orderBy
+          var docs = snapshot.docs.toList();
+          docs.sort((a, b) {
+            Timestamp timestampA = a.data()['timestamp'] as Timestamp;
+            Timestamp timestampB = b.data()['timestamp'] as Timestamp;
+            return timestampB.compareTo(timestampA); // Descending order
+          });
+          
+          // จำกัดแค่ 50 รายการ
+          if (docs.length > 50) {
+            docs = docs.take(50).toList();
+          }
+          
+          return docs
+              .map((doc) => TimestampModel.fromMap(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
+  // ดึงข้อมูลพนักงาน
+  Future<UserModel?> getUserData(String userId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection('employees')
+          .doc(userId)
+          .get();
+      
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user data: $e');
+      return null;
     }
   }
-
-
-  Future<void> logout() async {
-    await _auth.signOut();
-  }
-
-  Future<void> saveUserData(UserModel user) async {
-    await _firestore.collection('users').doc(user.uid).set(user.toMap());
-  }
-
-  Future<UserModel?> getUserData(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data()!);
-    }
-    return null;
-  }
-
-  User? get currentUser => _auth.currentUser;
 }
