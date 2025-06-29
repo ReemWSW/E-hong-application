@@ -13,64 +13,69 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BluetoothController btController = Get.find<BluetoothController>();
-    final SessionService sessionService = Get.find<SessionService>(); // เพิ่มบรรทัดนี้
+    final SessionService sessionService =
+        Get.find<SessionService>(); // เพิ่มบรรทัดนี้
     final TimestampService timestampService = TimestampService();
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => Text(
-          authController.currentUser.value != null 
-              ? "สวัสดี ${authController.currentUser.value!.employeeNo}"
-              : "หน้าหลัก"
-        )),
+        title: Obx(
+          () => Text(
+            authController.currentUser.value != null
+                ? "สวัสดี ${authController.currentUser.value!.employeeNo}"
+                : "หน้าหลัก",
+          ),
+        ),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
         actions: [
           // แสดงเวลาที่เหลือ
-          Obx(() => Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  // แสดง dialog สำหรับ extend session
-                  _showSessionDialog();
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: sessionService.remainingTime.value <= 60 
-                        ? Colors.red.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 16,
-                        color: sessionService.remainingTime.value <= 60 
-                            ? Colors.red[200]
-                            : Colors.white,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        sessionService.formattedRemainingTime,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: sessionService.remainingTime.value <= 60 
+          Obx(
+            () => Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    // แสดง dialog สำหรับ extend session
+                    _showSessionDialog();
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: sessionService.remainingTime.value <= 60
+                          ? Colors.red.withOpacity(0.2)
+                          : Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          size: 16,
+                          color: sessionService.remainingTime.value <= 60
                               ? Colors.red[200]
                               : Colors.white,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 4),
+                        Text(
+                          sessionService.formattedRemainingTime,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: sessionService.remainingTime.value <= 60
+                                ? Colors.red[200]
+                                : Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          )),
-          
+          ),
+
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () => authController.logout(),
@@ -138,36 +143,115 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 20),
-                    
+
                     // Manual Time Stamp Button
                     Container(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: authController.isLoading.value 
-                            ? null 
-                            : authController.manualStampTime,
-                        icon: authController.isLoading.value 
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                      child: Obx(
+                        () => ElevatedButton.icon(
+                          onPressed: btController.isConnected.value
+                              ? (authController.isLoading.value
+                                    ? null
+                                    : authController.manualStampTime)
+                              : () {
+                                  btController.startScan();
+                                  sessionService.extendSession();
+                                },
+                          icon: btController.isConnected.value
+                              ? (authController.isLoading.value
+                                    ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.green[600]!,
+                                              ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.bluetooth_connected,
+                                        color: Colors.green[600],
+                                      ))
+                              : (btController.isConnecting.value
+                                    ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.orange[600]!,
+                                              ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.bluetooth_disabled,
+                                        color: Colors.red[600],
+                                      )),
+                          label: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                btController.isConnected.value
+                                    ? (authController.isLoading.value
+                                          ? "กำลังบันทึกเวลา..."
+                                          : "🔗 เชื่อมต่อแล้ว - บันทึกเวลา")
+                                    : (btController.isConnecting.value
+                                          ? "🔄 กำลังค้นหาอุปกรณ์..."
+                                          : "📱 ไม่ได้เชื่อมต่อ - แตะเพื่อค้นหา"),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: btController.isConnected.value
+                                      ? Colors.green[600]
+                                      : (btController.isConnecting.value
+                                            ? Colors.orange[600]
+                                            : Colors.red[600]),
                                 ),
-                              )
-                            : Icon(Icons.access_time),
-                        label: Text(
-                          authController.isLoading.value 
-                              ? "กำลังบันทึกเวลา..." 
-                              : "บันทึกเวลาด้วยตนเอง",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.blue[600],
-                          padding: EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                              ),
+                              if (btController.isConnected.value &&
+                                  btController.selectedDevice.value != null)
+                                Text(
+                                  btController
+                                              .selectedDevice
+                                              .value
+                                              ?.name
+                                              ?.isNotEmpty ==
+                                          true
+                                      ? "อุปกรณ์: ${btController.selectedDevice.value!.name}"
+                                      : "อุปกรณ์: ${btController.selectedDevice.value!.address}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[500],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: btController.isConnected.value
+                                ? Colors.green[50]
+                                : (btController.isConnecting.value
+                                      ? Colors.orange[50]
+                                      : Colors.red[50]),
+                            foregroundColor: btController.isConnected.value
+                                ? Colors.green[600]
+                                : (btController.isConnecting.value
+                                      ? Colors.orange[600]
+                                      : Colors.red[600]),
+                            padding: EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: btController.isConnected.value
+                                    ? Colors.green[300]!
+                                    : (btController.isConnecting.value
+                                          ? Colors.orange[300]!
+                                          : Colors.red[300]!),
+                                width: 1.5,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -175,7 +259,7 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Content Section
               Expanded(
                 child: DefaultTabController(
@@ -192,10 +276,7 @@ class HomePage extends StatelessWidget {
                             icon: Icon(Icons.history),
                             text: "ประวัติการลงเวลา",
                           ),
-                          Tab(
-                            icon: Icon(Icons.bluetooth),
-                            text: "Bluetooth",
-                          ),
+                          Tab(icon: Icon(Icons.bluetooth), text: "Bluetooth"),
                         ],
                         labelColor: Colors.blue[600],
                         unselectedLabelColor: Colors.grey[600],
@@ -205,8 +286,11 @@ class HomePage extends StatelessWidget {
                         child: TabBarView(
                           children: [
                             // Timestamp History Tab
-                            _buildTimestampHistoryTab(timestampService, user.id!),
-                            
+                            _buildTimestampHistoryTab(
+                              timestampService,
+                              user.id!,
+                            ),
+
                             // Bluetooth Tab
                             _buildBluetoothTab(btController),
                           ],
@@ -225,7 +309,7 @@ class HomePage extends StatelessWidget {
 
   void _showSessionDialog() {
     final sessionService = Get.find<SessionService>();
-    
+
     Get.dialog(
       AlertDialog(
         title: Row(
@@ -235,32 +319,31 @@ class HomePage extends StatelessWidget {
             Text("การจัดการเซสชัน"),
           ],
         ),
-        content: Obx(() => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "เวลาที่เหลือ: ${sessionService.formattedRemainingTime}",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: sessionService.remainingTime.value <= 60 
-                    ? Colors.red[600]
-                    : Colors.green[600],
+        content: Obx(
+          () => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "เวลาที่เหลือ: ${sessionService.formattedRemainingTime}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: sessionService.remainingTime.value <= 60
+                      ? Colors.red[600]
+                      : Colors.green[600],
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            Text(
-              "คุณจะถูกออกจากระบบอัตโนมัติเมื่อหมดเวลา\nกดปุ่มด้านล่างเพื่อต่ออายุการใช้งาน",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("ปิด"),
+              SizedBox(height: 16),
+              Text(
+                "คุณจะถูกออกจากระบบอัตโนมัติเมื่อหมดเวลา\nกดปุ่มด้านล่างเพื่อต่ออายุการใช้งาน",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
           ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text("ปิด")),
           ElevatedButton(
             onPressed: () {
               authController.extendUserSession();
@@ -274,9 +357,12 @@ class HomePage extends StatelessWidget {
   }
 
   // เพิ่ม methods อื่นๆ เหมือนเดิม...
-  Widget _buildTimestampHistoryTab(TimestampService timestampService, String userId) {
+  Widget _buildTimestampHistoryTab(
+    TimestampService timestampService,
+    String userId,
+  ) {
     final sessionService = Get.find<SessionService>();
-    
+
     return RefreshIndicator(
       onRefresh: () async {
         // Extend session เมื่อ pull to refresh
@@ -441,7 +527,7 @@ class HomePage extends StatelessWidget {
 
   Widget _buildBluetoothTab(BluetoothController btController) {
     final sessionService = Get.find<SessionService>();
-    
+
     return Obx(() {
       if (btController.isConnecting.value) {
         return Center(
@@ -473,11 +559,15 @@ class HomePage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.bluetooth_connected, 
-                           color: Colors.green, size: 32),
+                      Icon(
+                        Icons.bluetooth_connected,
+                        color: Colors.green,
+                        size: 32,
+                      ),
                       SizedBox(height: 8),
                       Text(
-                        btController.selectedDevice.value?.name?.isNotEmpty == true
+                        btController.selectedDevice.value?.name?.isNotEmpty ==
+                                true
                             ? "✅ เชื่อมต่อกับ: ${btController.selectedDevice.value!.name}"
                             : "✅ เชื่อมต่อกับ: ${btController.selectedDevice.value?.address ?? 'อุปกรณ์'}",
                         style: TextStyle(
@@ -490,31 +580,35 @@ class HomePage extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 SizedBox(height: 30),
-                
+
                 // Activate Connect Button
                 Container(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: btController.isConnectResponseReceived.value 
-                        ? null 
+                    onPressed: btController.isConnectResponseReceived.value
+                        ? null
                         : () {
                             btController.activateConnect();
-                            sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                            sessionService
+                                .extendSession(); // Extend session เมื่อใช้งาน
                           },
-                    icon: Icon(btController.isConnectResponseReceived.value 
-                        ? Icons.check_circle 
-                        : Icons.electrical_services),
+                    icon: Icon(
+                      btController.isConnectResponseReceived.value
+                          ? Icons.check_circle
+                          : Icons.electrical_services,
+                    ),
                     label: Text(
-                      btController.isConnectResponseReceived.value 
-                          ? "🔌 Connect สำเร็จแล้ว" 
+                      btController.isConnectResponseReceived.value
+                          ? "🔌 Connect สำเร็จแล้ว"
                           : "🔌 Activate Connect",
                       style: TextStyle(fontSize: 16),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: btController.isConnectResponseReceived.value 
-                          ? Colors.green 
+                      backgroundColor:
+                          btController.isConnectResponseReceived.value
+                          ? Colors.green
                           : Colors.blue,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 15),
@@ -524,17 +618,18 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 15),
-                
+
                 // Activate Now Button
                 Container(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: btController.canActivate.value 
+                    onPressed: btController.canActivate.value
                         ? () {
                             btController.activateNow();
-                            sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                            sessionService
+                                .extendSession(); // Extend session เมื่อใช้งาน
                           }
                         : null,
                     icon: Icon(Icons.flash_on),
@@ -543,8 +638,8 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(fontSize: 16),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: btController.canActivate.value 
-                          ? Colors.orange 
+                      backgroundColor: btController.canActivate.value
+                          ? Colors.orange
                           : Colors.grey,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 15),
@@ -554,14 +649,15 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 20),
-                
+
                 // Disconnect Button
                 TextButton.icon(
                   onPressed: () {
                     btController.disconnect();
-                    sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                    sessionService
+                        .extendSession(); // Extend session เมื่อใช้งาน
                   },
                   icon: Icon(Icons.bluetooth_disabled, color: Colors.red),
                   label: Text(
@@ -581,14 +677,14 @@ class HomePage extends StatelessWidget {
               padding: EdgeInsets.all(16),
               margin: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: btController.isConnecting.value 
+                color: btController.isConnecting.value
                     ? Colors.orange.withOpacity(0.1)
                     : Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: btController.isConnecting.value 
+                  color: btController.isConnecting.value
                       ? Colors.orange.withOpacity(0.3)
-                      : Colors.blue.withOpacity(0.3)
+                      : Colors.blue.withOpacity(0.3),
                 ),
               ),
               child: Row(
@@ -599,7 +695,9 @@ class HomePage extends StatelessWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.orange,
+                            ),
                           ),
                         )
                       : Icon(Icons.bluetooth_searching, color: Colors.blue),
@@ -610,7 +708,7 @@ class HomePage extends StatelessWidget {
                           ? "🔄 กำลังค้นหาอุปกรณ์..."
                           : "🔍 ค้นหาอุปกรณ์ Bluetooth",
                       style: TextStyle(
-                        color: btController.isConnecting.value 
+                        color: btController.isConnecting.value
                             ? Colors.orange[700]
                             : Colors.blue[700],
                         fontWeight: FontWeight.w500,
@@ -621,7 +719,8 @@ class HomePage extends StatelessWidget {
                     IconButton(
                       onPressed: () {
                         btController.startScan();
-                        sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                        sessionService
+                            .extendSession(); // Extend session เมื่อใช้งาน
                       },
                       icon: Icon(Icons.refresh, color: Colors.blue),
                       tooltip: "รีเฟรช",
@@ -636,22 +735,22 @@ class HomePage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            btController.isConnecting.value 
+                            btController.isConnecting.value
                                 ? Icons.bluetooth_searching
                                 : Icons.bluetooth_disabled,
                             size: 48,
-                            color: btController.isConnecting.value 
+                            color: btController.isConnecting.value
                                 ? Colors.orange
                                 : Colors.grey,
                           ),
                           SizedBox(height: 16),
                           Text(
-                            btController.isConnecting.value 
+                            btController.isConnecting.value
                                 ? "กำลังค้นหา..."
                                 : "ไม่พบอุปกรณ์",
                             style: TextStyle(
                               fontSize: 16,
-                              color: btController.isConnecting.value 
+                              color: btController.isConnecting.value
                                   ? Colors.orange[600]
                                   : Colors.grey[600],
                             ),
@@ -661,7 +760,8 @@ class HomePage extends StatelessWidget {
                             TextButton.icon(
                               onPressed: () {
                                 btController.startScan();
-                                sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                                sessionService
+                                    .extendSession(); // Extend session เมื่อใช้งาน
                               },
                               icon: Icon(Icons.refresh),
                               label: Text("ค้นหาใหม่"),
@@ -676,13 +776,15 @@ class HomePage extends StatelessWidget {
                         final device = btController.devices[index];
                         return GestureDetector(
                           onTap: () {
-                            sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                            sessionService
+                                .extendSession(); // Extend session เมื่อใช้งาน
                           },
                           child: DeviceTile(
                             device: device,
                             onTap: () {
                               btController.connectToDevice(device);
-                              sessionService.extendSession(); // Extend session เมื่อใช้งาน
+                              sessionService
+                                  .extendSession(); // Extend session เมื่อใช้งาน
                             },
                           ),
                         );

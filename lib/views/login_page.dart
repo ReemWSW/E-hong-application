@@ -11,8 +11,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  final employeeNoController = TextEditingController();
-  final passwordController = TextEditingController();
+  final employeeNoController = TextEditingController(text: "61030243");
+  final passwordController = TextEditingController(text: "123456789");
   final companyController = TextEditingController();
   final AuthController authController = Get.find();
 
@@ -38,23 +38,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       duration: Duration(milliseconds: 800),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+
     _animationsInitialized = true;
     _animationController.forward();
   }
@@ -128,7 +124,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     String? errorText,
     bool obscureText = false,
     Widget? suffixIcon,
+    String? initialValue, // เพิ่มพารามิเตอร์นี้
   }) {
+    // ถ้ามี initialValue ให้ใส่เข้า controller
+    if (initialValue != null && controller.text.isEmpty) {
+      controller.text = initialValue;
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       child: TextFormField(
@@ -183,10 +185,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         icon: Icon(icon, size: 20),
         label: Text(
           text,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
@@ -209,11 +208,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blue[50]!,
-              Colors.indigo[50]!,
-              Colors.purple[50]!,
-            ],
+            colors: [Colors.blue[50]!, Colors.indigo[50]!, Colors.purple[50]!],
           ),
         ),
         child: SafeArea(
@@ -221,9 +216,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: FadeTransition(
-                opacity: _animationsInitialized ? _fadeAnimation : AlwaysStoppedAnimation(1.0),
+                opacity: _animationsInitialized
+                    ? _fadeAnimation
+                    : AlwaysStoppedAnimation(1.0),
                 child: SlideTransition(
-                  position: _animationsInitialized ? _slideAnimation : AlwaysStoppedAnimation(Offset.zero),
+                  position: _animationsInitialized
+                      ? _slideAnimation
+                      : AlwaysStoppedAnimation(Offset.zero),
                   child: Container(
                     constraints: BoxConstraints(maxWidth: 400),
                     child: Card(
@@ -241,14 +240,18 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             // Header Section
                             Column(
                               children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 80,
-                                  color: Colors.blue[600],
+                                Image.asset(
+                                  'assets/logo.png',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit
+                                      .contain, // ปรับให้รูปอยู่ในขนาดที่กำหนดโดยไม่บิดเบือน
                                 ),
                                 SizedBox(height: 24),
                                 Text(
-                                  _isRegisterMode ? "ลงทะเบียนพนักงาน" : "ระบบลงเวลาทำงาน",
+                                  _isRegisterMode
+                                      ? "ลงทะเบียนพนักงาน"
+                                      : "เข้าสู่ระบบ",
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -257,9 +260,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  _isRegisterMode 
-                                    ? "สร้างบัญชีพนักงานใหม่" 
-                                    : "เข้าสู่ระบบเพื่อลงเวลาทำงาน",
+                                  _isRegisterMode
+                                      ? "สร้างบัญชีพนักงานใหม่"
+                                      : "เข้าสู่ระบบเพื่อใช้งานอุปกรณ์",
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -268,9 +271,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            
+
                             SizedBox(height: 32),
-                            
+
                             // Form Section
                             _buildTextField(
                               controller: employeeNoController,
@@ -278,7 +281,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               icon: Icons.badge,
                               errorText: employeeNoError,
                             ),
-                            
+
                             // Company field - แสดงเฉพาะตอนสมัคร
                             if (_isRegisterMode)
                               _buildTextField(
@@ -287,7 +290,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 icon: Icons.business,
                                 errorText: companyError,
                               ),
-                            
+
                             _buildTextField(
                               controller: passwordController,
                               label: "รหัสผ่าน",
@@ -296,7 +299,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               obscureText: _obscureText,
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                                  _obscureText
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
                                   color: Colors.grey[600],
                                 ),
                                 onPressed: () {
@@ -306,23 +311,33 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 },
                               ),
                             ),
-                            
+
                             SizedBox(height: 8),
-                            
+
                             // Primary Action Button
-                            Obx(() => _buildPrimaryButton(
-                              text: authController.isLoading.value 
-                                  ? "กำลังดำเนินการ..." 
-                                  : _isRegisterMode ? "ลงทะเบียน" : "เข้าสู่ระบบ",
-                              onPressed: authController.isLoading.value 
-                                  ? null 
-                                  : _isRegisterMode ? validateAndRegister : validateAndLogin,
-                              color: _isRegisterMode ? Colors.green[600]! : Colors.blue[600]!,
-                              icon: authController.isLoading.value
-                                  ? Icons.hourglass_empty
-                                  : _isRegisterMode ? Icons.person_add : Icons.login,
-                            )),
-                            
+                            Obx(
+                              () => _buildPrimaryButton(
+                                text: authController.isLoading.value
+                                    ? "กำลังดำเนินการ..."
+                                    : _isRegisterMode
+                                    ? "ลงทะเบียน"
+                                    : "เข้าสู่ระบบ",
+                                onPressed: authController.isLoading.value
+                                    ? null
+                                    : _isRegisterMode
+                                    ? validateAndRegister
+                                    : validateAndLogin,
+                                color: _isRegisterMode
+                                    ? Colors.green[600]!
+                                    : Colors.blue[600]!,
+                                icon: authController.isLoading.value
+                                    ? Icons.hourglass_empty
+                                    : _isRegisterMode
+                                    ? Icons.person_add
+                                    : Icons.login,
+                              ),
+                            ),
+
                             if (!_isRegisterMode) ...[
                               SizedBox(height: 12),
                               Container(
@@ -330,11 +345,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 decoration: BoxDecoration(
                                   color: Colors.blue.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                  border: Border.all(
+                                    color: Colors.blue.withOpacity(0.3),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Colors.blue[600],
+                                      size: 20,
+                                    ),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -349,13 +370,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                               ),
                             ],
-                            
+
                             SizedBox(height: 16),
-                            
+
                             // Divider
                             Row(
                               children: [
-                                Expanded(child: Divider(color: Colors.grey[300])),
+                                Expanded(
+                                  child: Divider(color: Colors.grey[300]),
+                                ),
                                 Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
@@ -366,14 +389,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                 ),
-                                Expanded(child: Divider(color: Colors.grey[300])),
+                                Expanded(
+                                  child: Divider(color: Colors.grey[300]),
+                                ),
                               ],
                             ),
-                            
+
                             SizedBox(height: 16),
-                            
+
                             // Switch Mode Button
-                                                          TextButton(
+                            TextButton(
                               onPressed: () {
                                 setState(() {
                                   _isRegisterMode = !_isRegisterMode;
@@ -397,13 +422,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   style: TextStyle(fontSize: 14),
                                   children: [
                                     TextSpan(
-                                      text: _isRegisterMode 
-                                        ? "มีบัญชีอยู่แล้ว? " 
-                                        : "ยังไม่มีบัญชี? ",
+                                      text: _isRegisterMode
+                                          ? "มีบัญชีอยู่แล้ว? "
+                                          : "ยังไม่มีบัญชี? ",
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                     TextSpan(
-                                      text: _isRegisterMode ? "เข้าสู่ระบบ" : "ลงทะเบียน",
+                                      text: _isRegisterMode
+                                          ? "เข้าสู่ระบบ"
+                                          : "ลงทะเบียน",
                                       style: TextStyle(
                                         color: Colors.blue[600],
                                         fontWeight: FontWeight.w600,
@@ -413,9 +440,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                               ),
                             ),
-                            
+
                             SizedBox(height: 16),
-                            
+
                             // Footer
                             Text(
                               "โดยการใช้งานแอปนี้ คุณยอมรับ\nข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว",
