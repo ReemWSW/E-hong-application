@@ -20,7 +20,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final BluetoothController btController = Get.find<BluetoothController>();
     final SessionService sessionService = Get.find<SessionService>();
-    final TimestampService timestampService = TimestampService();
+    final SystemCheckService systemCheck = Get.find<SystemCheckService>();
 
     return Scaffold(
       appBar: AppBar(
@@ -117,7 +117,7 @@ class HomePage extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Colors.blue[600]!, Colors.blue[800]!],
+                    colors: _getBackgroundColors(btController),
                   ),
                 ),
                 child: Column(
@@ -126,9 +126,9 @@ class HomePage extends StatelessWidget {
                       radius: 40,
                       backgroundColor: Colors.white,
                       child: Icon(
-                        Icons.person,
+                        _getStatusIcon(btController),
                         size: 50,
-                        color: Colors.blue[600],
+                        color: _getIconColor(btController),
                       ),
                     ),
                     SizedBox(height: 16),
@@ -147,297 +147,50 @@ class HomePage extends StatelessWidget {
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),
-                    SizedBox(height: 20),
-
-                    // Manual Time Stamp Button
+                    SizedBox(height: 12),
+                    // แสดงสถานะ Bluetooth
                     Container(
-                      width: double.infinity,
-                      child: Obx(
-                        () => ElevatedButton.icon(
-                          onPressed: btController.canActivate.value
-                              ? () {
-                                  btController.activateNow();
-                                  sessionService.extendSession();
-                                }
-                              : () {
-                                  btController.startScan();
-                                  sessionService.extendSession();
-                                },
-                          icon: btController.isConnected.value
-                              ? (authController.isLoading.value
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.green[600]!,
-                                              ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.bluetooth_connected,
-                                        color: Colors.green[600],
-                                      ))
-                              : (btController.isConnecting.value
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.orange[600]!,
-                                              ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.bluetooth_disabled,
-                                        color: Colors.red[600],
-                                      )),
-                          label: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                btController.isConnected.value
-                                    ? (authController.isLoading.value
-                                          ? "กำลังบันทึกเวลา..."
-                                          : "🔗 เชื่อมต่อแล้ว - บันทึกเวลา")
-                                    : (btController.isConnecting.value
-                                          ? "🔄 กำลังค้นหาอุปกรณ์..."
-                                          : "📱 ไม่ได้เชื่อมต่อ - แตะเพื่อค้นหา"),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: btController.isConnected.value
-                                      ? Colors.green[600]
-                                      : (btController.isConnecting.value
-                                            ? Colors.orange[600]
-                                            : Colors.red[600]),
-                                ),
-                              ),
-                              if (btController.isConnected.value &&
-                                  btController.selectedDevice.value != null)
-                                Text(
-                                  btController
-                                              .selectedDevice
-                                              .value
-                                              ?.name
-                                              ?.isNotEmpty ==
-                                          true
-                                      ? "อุปกรณ์: ${btController.selectedDevice.value!.name}"
-                                      : "อุปกรณ์: ${btController.selectedDevice.value!.address}",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.green[500],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: btController.isConnected.value
-                                ? Colors.green[50]
-                                : (btController.isConnecting.value
-                                      ? Colors.orange[50]
-                                      : Colors.red[50]),
-                            foregroundColor: btController.isConnected.value
-                                ? Colors.green[600]
-                                : (btController.isConnecting.value
-                                      ? Colors.orange[600]
-                                      : Colors.red[600]),
-                            padding: EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: btController.isConnected.value
-                                    ? Colors.green[300]!
-                                    : (btController.isConnecting.value
-                                          ? Colors.orange[300]!
-                                          : Colors.red[300]!),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
                         ),
                       ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getStatusIcon(btController),
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            _getStatusText(btController),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    SizedBox(height: 20),
                   ],
                 ),
               ),
-
-              // System Status Section
-              // _buildSystemStatusSection(),
 
               // Content Section
               Expanded(child: _buildBluetoothTab(btController)),
             ],
           );
         }),
-      ),
-    );
-  }
-
-  Widget _buildSystemStatusSection() {
-    final SystemCheckService systemCheck = Get.find<SystemCheckService>();
-
-    return Obx(
-      () => Container(
-        margin: EdgeInsets.all(16),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: systemCheck.isSystemReady.value
-              ? Colors.green.withOpacity(0.1)
-              : Colors.red.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: systemCheck.isSystemReady.value
-                ? Colors.green.withOpacity(0.3)
-                : Colors.red.withOpacity(0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  systemCheck.isSystemReady.value
-                      ? Icons.check_circle
-                      : Icons.warning,
-                  color: systemCheck.isSystemReady.value
-                      ? Colors.green[600]
-                      : Colors.red[600],
-                  size: 24,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    systemCheck.isSystemReady.value
-                        ? "✅ ระบบพร้อมใช้งาน"
-                        : "⚠️ ระบบไม่พร้อม",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: systemCheck.isSystemReady.value
-                          ? Colors.green[700]
-                          : Colors.red[700],
-                    ),
-                  ),
-                ),
-                if (!systemCheck.isSystemReady.value)
-                  TextButton(
-                    onPressed: () async {
-                      await systemCheck.ensureSystemReady();
-                    },
-                    child: Text("แก้ไข"),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red[600],
-                    ),
-                  ),
-              ],
-            ),
-
-            SizedBox(height: 12),
-
-            // Bluetooth Status
-            Row(
-              children: [
-                Icon(
-                  Icons.bluetooth,
-                  color: systemCheck.isBluetoothEnabled.value
-                      ? Colors.blue[600]
-                      : Colors.grey[400],
-                  size: 20,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    systemCheck.isBluetoothEnabled.value
-                        ? "🔵 Bluetooth: เปิด"
-                        : "🔵 Bluetooth: ปิด",
-                    style: TextStyle(
-                      color: systemCheck.isBluetoothEnabled.value
-                          ? Colors.blue[600]
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ),
-                if (!systemCheck.isBluetoothEnabled.value)
-                  IconButton(
-                    onPressed: () => systemCheck.enableBluetooth(),
-                    icon: Icon(Icons.settings, color: Colors.blue[600]),
-                    iconSize: 20,
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(),
-                  ),
-              ],
-            ),
-
-            SizedBox(height: 8),
-
-            // GPS Status
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on,
-                  color: systemCheck.isLocationEnabled.value
-                      ? Colors.red[600]
-                      : Colors.grey[400],
-                  size: 20,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    systemCheck.isLocationEnabled.value
-                        ? "📍 GPS: เปิด"
-                        : "📍 GPS: ปิด",
-                    style: TextStyle(
-                      color: systemCheck.isLocationEnabled.value
-                          ? Colors.red[600]
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ),
-                if (!systemCheck.isLocationEnabled.value)
-                  IconButton(
-                    onPressed: () => systemCheck.enableLocation(),
-                    icon: Icon(Icons.settings, color: Colors.red[600]),
-                    iconSize: 20,
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(),
-                  ),
-              ],
-            ),
-
-            if (!systemCheck.isSystemReady.value) ...[
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.orange[700], size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "กรุณาเปิด Bluetooth และ GPS เพื่อใช้งานระบบ",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -487,175 +240,6 @@ class HomePage extends StatelessWidget {
             child: Text("ต่ออายุ 3 นาที"),
           ),
         ],
-      ),
-    );
-  }
-
-  // เพิ่ม methods อื่นๆ เหมือนเดิม...
-  Widget _buildTimestampHistoryTab(
-    TimestampService timestampService,
-    String userId,
-  ) {
-    final sessionService = Get.find<SessionService>();
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Extend session เมื่อ pull to refresh
-        sessionService.extendSession();
-        await Future.delayed(Duration(milliseconds: 500));
-      },
-      child: StreamBuilder<List<TimestampModel>>(
-        stream: timestampService.getTimestamps(userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            print("Error loading timestamps: ${snapshot.error}");
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                  SizedBox(height: 16),
-                  Text(
-                    "เกิดข้อผิดพลาดในการโหลดข้อมูล",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final timestamps = snapshot.data ?? [];
-
-          if (timestamps.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.access_time, size: 64, color: Colors.grey[400]),
-                  SizedBox(height: 16),
-                  Text(
-                    "ยังไม่มีประวัติการลงเวลา",
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: timestamps.length,
-            itemBuilder: (context, index) {
-              final timestamp = timestamps[index];
-              return Card(
-                margin: EdgeInsets.only(bottom: 12),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.access_time,
-                              color: Colors.blue[600],
-                              size: 20,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _formatDateTime(timestamp.timestamp),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                Text(
-                                  _formatTime(timestamp.timestamp),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.red[500],
-                              size: 18,
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "ละติจูด: ${timestamp.latitude.toStringAsFixed(6)}",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  Text(
-                                    "ลองจิจูด: ${timestamp.longitude.toStringAsFixed(6)}",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  if (timestamp.accuracy != null)
-                                    Text(
-                                      "ความแม่นยำ: ${timestamp.accuracy!.toStringAsFixed(1)} เมตร",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }
@@ -888,11 +472,55 @@ class HomePage extends StatelessWidget {
     });
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+  IconData _getStatusIcon(BluetoothController btController) {
+    if (btController.canActivate.value) {
+      return Icons.bluetooth_connected;
+    } else if (btController.isConnected.value) {
+      return Icons.bluetooth;
+    } else if (btController.isConnecting.value) {
+      return Icons.bluetooth_searching;
+    } else {
+      return Icons.bluetooth_disabled;
+    }
   }
 
-  String _formatTime(DateTime dateTime) {
-    return "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}";
+  List<Color> _getBackgroundColors(BluetoothController btController) {
+    if (btController.canActivate.value) {
+      // เชื่อมต่อแล้วและพร้อม Activate - สีเขียว
+      return [Colors.green[600]!, Colors.green[800]!];
+    } else if (btController.isConnected.value) {
+      // เชื่อมต่อแล้วแต่ยังไม่พร้อม Activate - สีส้ม
+      return [Colors.orange[600]!, Colors.orange[800]!];
+    } else if (btController.isConnecting.value) {
+      // กำลังเชื่อมต่อ - สีน้ำเงิน
+      return [Colors.blue[600]!, Colors.blue[800]!];
+    } else {
+      // ไม่ได้เชื่อมต่อ - สีเทา
+      return [Colors.grey[600]!, Colors.grey[800]!];
+    }
+  }
+
+  Color _getIconColor(BluetoothController btController) {
+    if (btController.canActivate.value) {
+      return Colors.green[600]!;
+    } else if (btController.isConnected.value) {
+      return Colors.orange[600]!;
+    } else if (btController.isConnecting.value) {
+      return Colors.blue[600]!;
+    } else {
+      return Colors.grey[600]!;
+    }
+  }
+
+  String _getStatusText(BluetoothController btController) {
+    if (btController.canActivate.value) {
+      return "🟢 พร้อมใช้งาน";
+    } else if (btController.isConnected.value) {
+      return "🟡 เชื่อมต่อแล้ว";
+    } else if (btController.isConnecting.value) {
+      return "🔵 กำลังค้นหา...";
+    } else {
+      return "🔴 ไม่ได้เชื่อมต่อ";
+    }
   }
 }

@@ -268,9 +268,9 @@ class SystemCheckService extends GetxController {
   Future<bool> ensureSystemReady() async {
     await checkSystemStatus();
     
-    if (!isSystemReady.value) {
-      await _enableSystemsSequentially();
-    }
+    // if (!isSystemReady.value) {
+    //   await _enableSystemsSequentially();
+    // }
     
     return isSystemReady.value;
   }
@@ -309,7 +309,7 @@ class SystemCheckService extends GetxController {
             SizedBox(height: 12),
             ...missingServices.map((service) => Padding(
               padding: EdgeInsets.symmetric(vertical: 4),
-              child: Text("• $service"),
+              child: Text("กรุณาเปิด $service"),
             )),
           ],
         ),
@@ -317,13 +317,6 @@ class SystemCheckService extends GetxController {
           TextButton(
             onPressed: () => Get.back(),
             child: Text("ปิด"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              await ensureSystemReady();
-            },
-            child: Text("เปิดระบบ"),
           ),
         ],
       ),

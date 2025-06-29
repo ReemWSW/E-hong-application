@@ -133,33 +133,6 @@ class BluetoothController extends GetxController {
     }
   }
 
-  void _startListeningForData() {
-    if (bluetoothService.connection == null) return;
-
-    _dataSubscription = bluetoothService.connection!.input?.listen(
-      (Uint8List data) {
-        _handleReceivedData(data);
-      },
-      onError: (error) {
-        print("Error receiving data: $error");
-      },
-    );
-  }
-
-  void _handleReceivedData(Uint8List data) {
-    // (เหมือนเดิมทั้งหมด - ไม่เปลี่ยนโค้ดนี้)
-  }
-
-  bool _validateResponseChecksum(Uint8List data) {
-    // (เหมือนเดิมทั้งหมด)
-    return true;
-  }
-
-  void _handleConnectResponse(String responseType, int commandByte) {}
-  void _handleActivateResponse(String responseType, int commandByte) {}
-  void _handleTestResponse(String responseType, int commandByte) {}
-  void _handleGeneralResponse(String responseType, int commandByte) {}
-
   // แก้ไข activateNow ให้ใช้ BluetoothService
   void activateNow() async {
     // ตรวจสอบระบบก่อนใช้งาน
@@ -285,7 +258,6 @@ class BluetoothController extends GetxController {
         isConnectResponseReceived.value = false;
         canActivate.value = false;
 
-        _startListeningForData();
         await saveLastConnectedDevice(device.address);
 
         Get.snackbar(
