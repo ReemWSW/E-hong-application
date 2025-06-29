@@ -7,13 +7,15 @@ class SystemCheckService extends GetxController {
   var isBluetoothEnabled = false.obs;
   var isLocationEnabled = false.obs;
   var isSystemReady = false.obs;
+  var isCheckingOnStart = false.obs; // เพิ่มสำหรับตรวจสอบตอนเริ่มต้น
   
   Timer? _statusCheckTimer;
   
   @override
   void onInit() {
     super.onInit();
-    startStatusMonitoring();
+    // ตรวจสอบและขอเปิดระบบทันทีตอนเริ่มต้น
+    _checkSystemOnAppStart();
   }
   
   @override
@@ -22,13 +24,175 @@ class SystemCheckService extends GetxController {
     super.onClose();
   }
   
+  // ตรวจสอบระบบตอนเริ่มต้นแอป
+  Future<void> _checkSystemOnAppStart() async {
+    isCheckingOnStart.value = true;
+    
+    // รอสักครู่ให้แอปโหลดเสร็จ
+    await Future.delayed(Duration(milliseconds: 500));
+    
+    await checkSystemStatus();
+    
+    // ถ้าระบบไม่พร้อม ให้แสดง dialog และขอเปิด
+    if (!isSystemReady.value) {
+      await _showStartupSystemDialog();
+    }
+    
+    isCheckingOnStart.value = false;
+    
+    // เริ่มตรวจสอบแบบ real-time หลังจากเช็คครั้งแรกเสร็จ
+    startStatusMonitoring();
+  }
+  
+  // แสดง dialog ตอนเริ่มต้นแอป
+  Future<void> _showStartupSystemDialog() async {
+    List<String> missingServices = [];
+    
+    if (!isBluetoothEnabled.value) {
+      missingServices.add("🔵 Bluetooth");
+    }
+    
+    if (!isLocationEnabled.value) {
+      missingServices.add("📍 GPS/Location");
+    }
+    
+    if (missingServices.isEmpty) return;
+    
+    await Get.dialog(
+      WillPopScope(
+        onWillPop: () async => false, // ไม่ให้ปิด dialog ด้วย back button
+        child: AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.settings, color: Colors.blue[600]),
+              SizedBox(width: 8),
+              Text("ตั้งค่าระบบ"),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "แอปต้องการเปิดระบบต่อไปนี้:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              ...missingServices.map((service) => Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_right, color: Colors.blue[600], size: 20),
+                    SizedBox(width: 8),
+                    Text(service),
+                  ],
+                ),
+              )),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "ระบบจะขอสิทธิ์และเปิดการตั้งค่าให้อัตโนมัติ",
+                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                Get.back();
+                await _enableSystemsSequentially();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+              ),
+              child: Text("เปิดระบบ"),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false, // ไม่ให้ปิด dialog ด้วยการกดข้างนอก
+    );
+  }
+  
+  // เปิดระบบทีละตัวตามลำดับ
+  Future<void> _enableSystemsSequentially() async {
+    // แสดง loading
+    Get.dialog(
+      WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("กำลังตั้งค่าระบบ..."),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+    
+    try {
+      // เปิด Bluetooth ถ้ายังปิด
+      if (!isBluetoothEnabled.value) {
+        await enableBluetooth();
+        await Future.delayed(Duration(seconds: 1));
+      }
+      
+      // เปิด GPS ถ้ายังปิด
+      if (!isLocationEnabled.value) {
+        await enableLocation();
+        await Future.delayed(Duration(seconds: 1));
+      }
+      
+      // ตรวจสอบสถานะสุดท้าย
+      await checkSystemStatus();
+      
+      Get.back(); // ปิด loading dialog
+      
+      // แสดงผลลัพธ์
+      if (isSystemReady.value) {
+        Get.snackbar(
+          "✅ สำเร็จ",
+          "ระบบพร้อมใช้งานแล้ว",
+          backgroundColor: Colors.green.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 2),
+        );
+      } else {
+        Get.snackbar(
+          "⚠️ แจ้งเตือน",
+          "กรุณาเปิดระบบที่เหลือด้วยตนเอง",
+          backgroundColor: Colors.orange.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      Get.back(); // ปิด loading dialog
+      Get.snackbar(
+        "❌ ผิดพลาด",
+        "เกิดข้อผิดพลาดในการตั้งค่าระบบ",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+      );
+    }
+  }
+  
   // เริ่มตรวจสอบสถานะระบบแบบ real-time
   void startStatusMonitoring() {
-    // ตรวจสอบทันทีเมื่อเริ่มต้น
-    checkSystemStatus();
-    
-    // ตรวจสอบทุก 3 วินาที
-    _statusCheckTimer = Timer.periodic(Duration(seconds: 3), (_) {
+    // ตรวจสอบทุก 5 วินาที (ลดลงจาก 3 วินาที)
+    _statusCheckTimer = Timer.periodic(Duration(seconds: 5), (_) {
       checkSystemStatus();
     });
   }
@@ -67,34 +231,14 @@ class SystemCheckService extends GetxController {
   // เปิด Bluetooth
   Future<bool> enableBluetooth() async {
     try {
-      // ขอ permission และเปิด Bluetooth
       PermissionStatus status = await Permission.bluetooth.request();
       
       if (status.isDenied || status.isPermanentlyDenied) {
         await openAppSettings();
+        await Future.delayed(Duration(seconds: 2));
       }
       
-      // ตรวจสอบใหม่
       await checkBluetoothStatus();
-      
-      if (isBluetoothEnabled.value) {
-        Get.snackbar(
-          "✅ สำเร็จ",
-          "เปิด Bluetooth เรียบร้อยแล้ว",
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
-      } else {
-        Get.snackbar(
-          "❌ ไม่สำเร็จ",
-          "กรุณาเปิด Bluetooth ในการตั้งค่า",
-          backgroundColor: Colors.red.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 3),
-        );
-      }
-      
       return isBluetoothEnabled.value;
     } catch (e) {
       print("Error enabling Bluetooth: $e");
@@ -105,34 +249,14 @@ class SystemCheckService extends GetxController {
   // เปิด GPS
   Future<bool> enableLocation() async {
     try {
-      // ขอ permission และเปิด Location
       PermissionStatus status = await Permission.location.request();
       
       if (status.isDenied || status.isPermanentlyDenied) {
         await openAppSettings();
+        await Future.delayed(Duration(seconds: 2));
       }
       
-      // ตรวจสอบใหม่
       await checkLocationStatus();
-      
-      if (isLocationEnabled.value) {
-        Get.snackbar(
-          "✅ สำเร็จ",
-          "เปิด GPS เรียบร้อยแล้ว",
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
-      } else {
-        Get.snackbar(
-          "❌ ไม่สำเร็จ",
-          "กรุณาเปิด GPS ในการตั้งค่า",
-          backgroundColor: Colors.red.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 3),
-        );
-      }
-      
       return isLocationEnabled.value;
     } catch (e) {
       print("Error enabling Location: $e");
@@ -140,25 +264,18 @@ class SystemCheckService extends GetxController {
     }
   }
   
-  // ตรวจสอบและขอให้เปิดระบบที่จำเป็น
+  // ตรวจสอบและขอให้เปิดระบบที่จำเป็น (สำหรับเรียกจากที่อื่น)
   Future<bool> ensureSystemReady() async {
     await checkSystemStatus();
     
-    if (!isBluetoothEnabled.value) {
-      await enableBluetooth();
+    if (!isSystemReady.value) {
+      await _enableSystemsSequentially();
     }
-    
-    if (!isLocationEnabled.value) {
-      await enableLocation();
-    }
-    
-    // ตรวจสอบอีกครั้งหลังจากพยายามเปิด
-    await checkSystemStatus();
     
     return isSystemReady.value;
   }
   
-  // แสดง dialog เตือนเมื่อระบบไม่พร้อม
+  // แสดง dialog เตือนเมื่อระบบไม่พร้อม (สำหรับเรียกจากที่อื่น)
   void showSystemNotReadyDialog() {
     List<String> missingServices = [];
     
