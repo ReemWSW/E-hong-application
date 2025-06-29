@@ -1,20 +1,25 @@
+import 'package:e_hong_app/services/system_check_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/bluetooth_controller.dart';
 import '../services/timestamp_service.dart';
-import '../services/session_service.dart'; // เพิ่มบรรทัดนี้
+import '../services/session_service.dart';
 import '../models/timestamp_model.dart';
 import '../widgets/device_tile.dart';
 
 class HomePage extends StatelessWidget {
   final AuthController authController = Get.find();
-
+  HomePage({super.key}) {
+    // เพิ่มการ initialize SystemCheckService หากยังไม่มี
+    if (!Get.isRegistered<SystemCheckService>()) {
+      Get.put(SystemCheckService());
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final BluetoothController btController = Get.find<BluetoothController>();
-    final SessionService sessionService =
-        Get.find<SessionService>(); // เพิ่มบรรทัดนี้
+    final SessionService sessionService = Get.find<SessionService>();
     final TimestampService timestampService = TimestampService();
 
     return Scaffold(
@@ -261,6 +266,9 @@ class HomePage extends StatelessWidget {
                 ),
               ),
 
+              // System Status Section
+              _buildSystemStatusSection(),
+
               // Content Section
               Expanded(
                 child: DefaultTabController(
@@ -304,6 +312,170 @@ class HomePage extends StatelessWidget {
             ],
           );
         }),
+      ),
+    );
+  }
+
+  Widget _buildSystemStatusSection() {
+    final SystemCheckService systemCheck = Get.find<SystemCheckService>();
+
+    return Obx(
+      () => Container(
+        margin: EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: systemCheck.isSystemReady.value
+              ? Colors.green.withOpacity(0.1)
+              : Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: systemCheck.isSystemReady.value
+                ? Colors.green.withOpacity(0.3)
+                : Colors.red.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  systemCheck.isSystemReady.value
+                      ? Icons.check_circle
+                      : Icons.warning,
+                  color: systemCheck.isSystemReady.value
+                      ? Colors.green[600]
+                      : Colors.red[600],
+                  size: 24,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    systemCheck.isSystemReady.value
+                        ? "✅ ระบบพร้อมใช้งาน"
+                        : "⚠️ ระบบไม่พร้อม",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: systemCheck.isSystemReady.value
+                          ? Colors.green[700]
+                          : Colors.red[700],
+                    ),
+                  ),
+                ),
+                if (!systemCheck.isSystemReady.value)
+                  TextButton(
+                    onPressed: () async {
+                      await systemCheck.ensureSystemReady();
+                    },
+                    child: Text("แก้ไข"),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red[600],
+                    ),
+                  ),
+              ],
+            ),
+
+            SizedBox(height: 12),
+
+            // Bluetooth Status
+            Row(
+              children: [
+                Icon(
+                  Icons.bluetooth,
+                  color: systemCheck.isBluetoothEnabled.value
+                      ? Colors.blue[600]
+                      : Colors.grey[400],
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    systemCheck.isBluetoothEnabled.value
+                        ? "🔵 Bluetooth: เปิด"
+                        : "🔵 Bluetooth: ปิด",
+                    style: TextStyle(
+                      color: systemCheck.isBluetoothEnabled.value
+                          ? Colors.blue[600]
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                if (!systemCheck.isBluetoothEnabled.value)
+                  IconButton(
+                    onPressed: () => systemCheck.enableBluetooth(),
+                    icon: Icon(Icons.settings, color: Colors.blue[600]),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
+                  ),
+              ],
+            ),
+
+            SizedBox(height: 8),
+
+            // GPS Status
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on,
+                  color: systemCheck.isLocationEnabled.value
+                      ? Colors.red[600]
+                      : Colors.grey[400],
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    systemCheck.isLocationEnabled.value
+                        ? "📍 GPS: เปิด"
+                        : "📍 GPS: ปิด",
+                    style: TextStyle(
+                      color: systemCheck.isLocationEnabled.value
+                          ? Colors.red[600]
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                if (!systemCheck.isLocationEnabled.value)
+                  IconButton(
+                    onPressed: () => systemCheck.enableLocation(),
+                    icon: Icon(Icons.settings, color: Colors.red[600]),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
+                  ),
+              ],
+            ),
+
+            if (!systemCheck.isSystemReady.value) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.orange[700], size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "กรุณาเปิด Bluetooth และ GPS เพื่อใช้งานระบบ",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

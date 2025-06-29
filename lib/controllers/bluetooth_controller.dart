@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:math';
 
+import 'package:e_hong_app/services/system_check_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_blue_classic/flutter_blue_classic.dart';
@@ -11,7 +12,8 @@ import '../services/bluetooth_service.dart'; // เพิ่มการ import 
 
 class BluetoothController extends GetxController {
   final FlutterBlueClassic bluetooth = FlutterBlueClassic();
-  final BluetoothService bluetoothService = BluetoothService(); // เพิ่ม instance ของ BluetoothService
+  final BluetoothService bluetoothService = BluetoothService();
+  final SystemCheckService systemCheck = Get.put(SystemCheckService());
 
   var devices = <BluetoothDevice>[].obs;
   var selectedDevice = Rxn<BluetoothDevice>();
@@ -32,6 +34,7 @@ class BluetoothController extends GetxController {
     super.onInit();
     ensureBluetoothOnThenScan();
     autoReconnect();
+     _initializeSystem();
   }
 
   @override
@@ -42,6 +45,18 @@ class BluetoothController extends GetxController {
     bluetoothService.disconnect(); // ใช้ service แทน
     super.onClose();
   }
+
+   Future<void> _initializeSystem() async {
+    bool systemReady = await systemCheck.ensureSystemReady();
+    
+    if (systemReady) {
+      await ensureBluetoothOnThenScan();
+      await autoReconnect();
+    } else {
+      systemCheck.showSystemNotReadyDialog();
+    }
+  }
+
 
   Future<void> autoReconnect() async {
     String? lastAddress = await getLastConnectedDeviceAddress();
@@ -61,20 +76,41 @@ class BluetoothController extends GetxController {
   }
 
   Future<void> startScan() async {
+    // ตรวจสอบระบบก่อนสแกน
+    if (!systemCheck.isSystemReady.value) {
+      bool systemReady = await systemCheck.ensureSystemReady();
+      if (!systemReady) {
+        systemCheck.showSystemNotReadyDialog();
+        return;
+      }
+    }
+
     isConnecting.value = true;
     devices.clear();
     await requestPermissions();
 
-    bluetooth.startScan();
-    _scanSubscription = bluetooth.scanResults.listen((device) {
-      if (!devices.any((d) => d.address == device.address)) {
-        devices.add(device);
-      }
-    });
+    try {
+      bluetooth.startScan();
+      _scanSubscription = bluetooth.scanResults.listen((device) {
+        if (!devices.any((d) => d.address == device.address)) {
+          devices.add(device);
+        }
+      });
 
-    await Future.delayed(Duration(seconds: 5));
-    await stopScan();
-    isConnecting.value = false;
+      await Future.delayed(Duration(seconds: 5));
+      await stopScan();
+    } catch (e) {
+      Get.snackbar(
+        "❌ การสแกนล้มเหลว",
+        "ไม่สามารถค้นหาอุปกรณ์ได้\nกรุณาตรวจสอบว่า Bluetooth เปิดอยู่",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isConnecting.value = false;
+    }
   }
 
   Future<void> stopScan() async {
@@ -125,7 +161,16 @@ class BluetoothController extends GetxController {
   void _handleGeneralResponse(String responseType, int commandByte) {}
 
   // แก้ไข activateNow ให้ใช้ BluetoothService
-  void activateNow() {
+  void activateNow() async {
+    // ตรวจสอบระบบก่อนใช้งาน
+    if (!systemCheck.isSystemReady.value) {
+      bool systemReady = await systemCheck.ensureSystemReady();
+      if (!systemReady) {
+        systemCheck.showSystemNotReadyDialog();
+        return;
+      }
+    }
+
     if (!bluetoothService.isConnected) {
       Get.snackbar(
         "ไม่ได้เชื่อมต่อ",
@@ -218,13 +263,20 @@ class BluetoothController extends GetxController {
     return prefs.getString('last_device');
   }
 
-  // แก้ไข connectToDevice ให้ใช้ BluetoothService
   void connectToDevice(BluetoothDevice device) async {
+    // ตรวจสอบระบบก่อนเชื่อมต่อ
+    if (!systemCheck.isSystemReady.value) {
+      bool systemReady = await systemCheck.ensureSystemReady();
+      if (!systemReady) {
+        systemCheck.showSystemNotReadyDialog();
+        return;
+      }
+    }
+
     try {
       isConnecting.value = true;
       await disconnect();
       
-      // ใช้ BluetoothService แทนการเชื่อมต่อโดยตรง
       await bluetoothService.connect(device);
 
       if (bluetoothService.isConnected) {
@@ -245,7 +297,6 @@ class BluetoothController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
 
-        // รอสักครู่แล้วเซ็ตสถานะว่า Activate Connect สำเร็จ
         Timer(Duration(seconds: 2), () {
           if (isConnected.value) {
             isConnectResponseReceived.value = true;
@@ -272,9 +323,16 @@ class BluetoothController extends GetxController {
       isConnectResponseReceived.value = false;
       canActivate.value = false;
 
+      String errorMessage = "ไม่สามารถเชื่อมต่อกับ ${device.name ?? 'อุปกรณ์'} ได้";
+      
+      // เพิ่มข้อความเฉพาะเมื่อเป็นปัญหาระบบ
+      if (!systemCheck.isBluetoothEnabled.value) {
+        errorMessage += "\n🔵 Bluetooth ไม่ได้เปิด";
+      }
+
       Get.snackbar(
         "❌ เชื่อมต่อไม่สำเร็จ",
-        "ไม่สามารถเชื่อมต่อกับ ${device.name ?? 'อุปกรณ์'} ได้\nError: $e",
+        errorMessage,
         backgroundColor: Colors.red.withOpacity(0.8),
         colorText: Colors.white,
         duration: Duration(seconds: 4),
