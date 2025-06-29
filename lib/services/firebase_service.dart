@@ -21,7 +21,9 @@ class FirebaseService {
           .get();
 
       if (existingUser.docs.isNotEmpty) {
-        throw Exception('พนักงานหมายเลข $employeeNo ในบริษัท $company มีอยู่แล้ว');
+        throw Exception(
+          'พนักงานหมายเลข $employeeNo ในบริษัท $company มีอยู่แล้ว',
+        );
       }
 
       // สร้างพนักงานใหม่
@@ -62,39 +64,55 @@ class FirebaseService {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        throw Exception('ไม่พบพนักงานหมายเลข $employeeNo');
+        throw 'ไม่พบพนักงานหมายเลข $employeeNo';
       }
 
       // ตรวจสอบว่ามีมากกว่า 1 พนักงานหรือไม่ (เผื่อมี employeeNo ซ้ำข้ามบริษัท)
       if (querySnapshot.docs.length > 1) {
         // ถ้ามีหลายคน ให้แสดงรายชื่อบริษัท
         List<String> companies = querySnapshot.docs
-            .map((doc) => (doc.data() as Map<String, dynamic>)['company'] as String)
+            .map(
+              (doc) =>
+                  (doc.data() as Map<String, dynamic>)['company'] as String,
+            )
             .toSet()
             .toList();
-        
-        throw Exception('พบพนักงานหมายเลข $employeeNo ในหลายบริษัท: ${companies.join(", ")}\nกรุณาติดต่อผู้ดูแลระบบ');
+
+        throw 'พบพนักงานหมายเลข $employeeNo ในหลายบริษัท: ${companies.join(", ")}\nกรุณาติดต่อผู้ดูแลระบบ';
       }
 
       // ได้ข้อมูลพนักงาน
       DocumentSnapshot doc = querySnapshot.docs.first;
-      UserModel user = UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      UserModel user = UserModel.fromMap(
+        doc.data() as Map<String, dynamic>,
+        doc.id,
+      );
 
       // ตรวจสอบรหัสผ่าน
       if (!user.verifyPassword(password)) {
-        throw Exception('รหัสผ่านไม่ถูกต้อง');
+        throw 'รหัสผ่านไม่ถูกต้อง';
       }
 
       // อัปเดต last login
       UserModel updatedUser = user.copyWithLastLogin();
-      await _firestore
-          .collection('employees')
-          .doc(user.id!)
-          .update({'lastLogin': Timestamp.fromDate(DateTime.now())});
+      await _firestore.collection('employees').doc(user.id!).update({
+        'lastLogin': Timestamp.fromDate(DateTime.now()),
+      });
 
       return updatedUser;
     } catch (e) {
-      throw Exception('เข้าสู่ระบบไม่สำเร็จ: $e');
+      // ตรวจสอบว่า error เป็น String ที่เรา throw เองหรือไม่
+      if (e is String) {
+        throw e; // throw error message โดยตรง
+      }
+
+      // ถ้าเป็น error อื่นๆ ให้แปลงเป็นข้อความที่เข้าใจง่าย
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11); // เอาคำว่า "Exception: " ออก
+      }
+
+      throw errorMessage;
     }
   }
 
@@ -117,12 +135,12 @@ class FirebaseService {
             Timestamp timestampB = b.data()['timestamp'] as Timestamp;
             return timestampB.compareTo(timestampA); // Descending order
           });
-          
+
           // จำกัดแค่ 50 รายการ
           if (docs.length > 50) {
             docs = docs.take(50).toList();
           }
-          
+
           return docs
               .map((doc) => TimestampModel.fromMap(doc.data(), doc.id))
               .toList();
@@ -136,7 +154,7 @@ class FirebaseService {
           .collection('employees')
           .doc(userId)
           .get();
-      
+
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }

@@ -29,15 +29,14 @@ class SessionService extends GetxController {
     remainingTime.value = sessionTimeoutMinutes * 60; // 3 นาทีในวินาที
     
     // ตั้งค่า Timer หลักสำหรับ Auto Logout
-    // _sessionTimer = Timer(Duration(minutes: sessionTimeoutMinutes), () {
-    _sessionTimer = Timer(Duration(days: sessionTimeoutMinutes), () {
+    _sessionTimer = Timer(Duration(minutes: sessionTimeoutMinutes), () {
+    // _sessionTimer = Timer(Duration(days: sessionTimeoutMinutes), () {
       _performAutoLogout();
     });
     
     // ตั้งค่า Timer สำหรับแจ้งเตือนก่อน logout
     _warningTimer = Timer(
-      Duration(days: sessionTimeoutMinutes) - Duration(seconds: warningTimeSeconds),
-      // Duration(minutes: sessionTimeoutMinutes) - Duration(seconds: warningTimeSeconds),
+      Duration(minutes: sessionTimeoutMinutes) - Duration(seconds: warningTimeSeconds),
       () {
         _showWarningDialog();
       }

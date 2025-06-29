@@ -267,48 +267,10 @@ class HomePage extends StatelessWidget {
               ),
 
               // System Status Section
-              _buildSystemStatusSection(),
+              // _buildSystemStatusSection(),
 
               // Content Section
-              Expanded(
-                child: DefaultTabController(
-                  length: 2,
-                  child: Column(
-                    children: [
-                      TabBar(
-                        onTap: (index) {
-                          // Extend session เมื่อเปลี่ยน tab
-                          sessionService.extendSession();
-                        },
-                        tabs: [
-                          Tab(
-                            icon: Icon(Icons.history),
-                            text: "ประวัติการลงเวลา",
-                          ),
-                          Tab(icon: Icon(Icons.bluetooth), text: "Bluetooth"),
-                        ],
-                        labelColor: Colors.blue[600],
-                        unselectedLabelColor: Colors.grey[600],
-                        indicatorColor: Colors.blue[600],
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            // Timestamp History Tab
-                            _buildTimestampHistoryTab(
-                              timestampService,
-                              user.id!,
-                            ),
-
-                            // Bluetooth Tab
-                            _buildBluetoothTab(btController),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              Expanded(child: _buildBluetoothTab(btController)),
             ],
           );
         }),
@@ -722,62 +684,58 @@ class HomePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Connection Status
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.bluetooth_connected,
-                        color: Colors.green,
-                        size: 32,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        btController.selectedDevice.value?.name?.isNotEmpty ==
-                                true
-                            ? "✅ เชื่อมต่อกับ: ${btController.selectedDevice.value!.name}"
-                            : "✅ เชื่อมต่อกับ: ${btController.selectedDevice.value?.address ?? 'อุปกรณ์'}",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
+                Obx(
+                  () => AnimatedContainer(
+                    duration: Duration(milliseconds: 300),
+                    width: 200,
+                    height: 200,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: btController.canActivate.value
+                            ? () {
+                                btController.activateNow();
+                                sessionService.extendSession();
+                              }
+                            : null,
+                        borderRadius: BorderRadius.circular(70),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: btController.canActivate.value
+                                ? Colors.orange
+                                : Colors.grey,
+                            boxShadow: btController.canActivate.value
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.orange.withOpacity(0.4),
+                                      blurRadius: 15,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.flash_on,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                "Activate\nNow",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 30),
-
-                Container(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: btController.canActivate.value
-                        ? () {
-                            btController.activateNow();
-                            sessionService.extendSession();
-                          }
-                        : null,
-                    icon: Icon(Icons.flash_on),
-                    label: Text(
-                      "⚡ Activate Now",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: btController.canActivate.value
-                          ? Colors.orange
-                          : Colors.grey,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
