@@ -10,7 +10,6 @@ class TimestampModel {
   final double latitude;
   final double longitude;
   final double? accuracy;
-  final String? address;
 
   TimestampModel({
     this.id,
@@ -21,7 +20,6 @@ class TimestampModel {
     required this.latitude,
     required this.longitude,
     this.accuracy,
-    this.address,
   });
 
   factory TimestampModel.fromMap(Map<String, dynamic> map, String id) {
@@ -34,7 +32,6 @@ class TimestampModel {
       latitude: (map['latitude'] ?? 0.0).toDouble(),
       longitude: (map['longitude'] ?? 0.0).toDouble(),
       accuracy: map['accuracy']?.toDouble(),
-      address: map['address'],
     );
   }
 
@@ -47,7 +44,6 @@ class TimestampModel {
       'latitude': latitude,
       'longitude': longitude,
       'accuracy': accuracy,
-      'address': address,
     };
   }
 }
