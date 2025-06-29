@@ -149,10 +149,11 @@ class HomePage extends StatelessWidget {
                       width: double.infinity,
                       child: Obx(
                         () => ElevatedButton.icon(
-                          onPressed: btController.isConnected.value
-                              ? (authController.isLoading.value
-                                    ? null
-                                    : authController.manualStampTime)
+                          onPressed: btController.canActivate.value
+                              ? () {
+                                  btController.activateNow();
+                                  sessionService.extendSession();
+                                }
                               : () {
                                   btController.startScan();
                                   sessionService.extendSession();
@@ -583,53 +584,13 @@ class HomePage extends StatelessWidget {
 
                 SizedBox(height: 30),
 
-                // Activate Connect Button
-                Container(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: btController.isConnectResponseReceived.value
-                        ? null
-                        : () {
-                            btController.activateConnect();
-                            sessionService
-                                .extendSession(); // Extend session เมื่อใช้งาน
-                          },
-                    icon: Icon(
-                      btController.isConnectResponseReceived.value
-                          ? Icons.check_circle
-                          : Icons.electrical_services,
-                    ),
-                    label: Text(
-                      btController.isConnectResponseReceived.value
-                          ? "🔌 Connect สำเร็จแล้ว"
-                          : "🔌 Activate Connect",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          btController.isConnectResponseReceived.value
-                          ? Colors.green
-                          : Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 15),
-
-                // Activate Now Button
                 Container(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: btController.canActivate.value
                         ? () {
                             btController.activateNow();
-                            sessionService
-                                .extendSession(); // Extend session เมื่อใช้งาน
+                            sessionService.extendSession();
                           }
                         : null,
                     icon: Icon(Icons.flash_on),
