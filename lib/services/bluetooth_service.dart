@@ -12,7 +12,7 @@ class BluetoothService {
 
   Future<void> connect(BluetoothDevice device) async {
     connection = await _bluetooth.connect(device.address);
-    
+
     // ส่งคำสั่ง Activate Connect ทันทีหลังจากเชื่อมต่อ
     if (isConnected) {
       await Future.delayed(Duration(milliseconds: 500)); // รอให้เชื่อมต่อเสถียร
@@ -26,22 +26,22 @@ class BluetoothService {
   }
 
   // ส่งคำสั่ง Activate Connect
-  void sendCmdActivateConnect() {
+  Future<void> sendCmdActivateConnect() async {
     if (!isConnected) return;
-    
+
     Uint8List byteOut = Uint8List(64);
-    
+
     // เคลียร์ array
     for (int i = 0; i < 64; i++) {
       byteOut[i] = 0;
     }
-    
+
     // ตั้งค่าข้อมูล
     byteOut[0] = 0xA1;
     byteOut[1] = 0x11;
     byteOut[2] = 0xF1;
     byteOut[3] = 0x01;
-    
+
     // คำนวณ checksum
     int chksum = 0;
     for (int i = 0; i < 62; i++) {
@@ -49,44 +49,58 @@ class BluetoothService {
     }
     byteOut[62] = chksum & 0xFF;
     byteOut[63] = 0xE1;
-    
+
     // ส่งข้อมูล
     connection?.output.add(byteOut);
     connection?.output.allSent;
-    
+
     print("Sent Activate Connect command");
   }
 
   // ส่งคำสั่ง Activate Now
-  void sendCmdActivateNow() {
+  Future<void> sendCmdActivateNow() async {
     if (!isConnected) return;
-    
-    Uint8List byteOut = Uint8List(64);
-    
-    // เคลียร์ array
-    for (int i = 0; i < 64; i++) {
-      byteOut[i] = 0;
+
+    try {
+      // ส่งคำสั่ง Activate Connect ก่อน
+      print("Sending Activate Connect before Activate Now...");
+      await sendCmdActivateConnect();
+
+      // รอสักครู่ให้คำสั่งแรกส่งเสร็จ
+      await Future.delayed(Duration(milliseconds: 300));
+
+      // ส่งคำสั่ง Activate Now
+      print("Sending Activate Now...");
+      Uint8List byteOut = Uint8List(64);
+
+      // เคลียร์ array
+      for (int i = 0; i < 64; i++) {
+        byteOut[i] = 0;
+      }
+
+      // ตั้งค่าข้อมูล
+      byteOut[0] = 0xA1;
+      byteOut[1] = 0x11;
+      byteOut[2] = 0xF1;
+      byteOut[3] = 0x02;
+
+      // คำนวณ checksum
+      int chksum = 0;
+      for (int i = 0; i < 62; i++) {
+        chksum = chksum + byteOut[i];
+      }
+      byteOut[62] = chksum & 0xFF;
+      byteOut[63] = 0xE1;
+
+      // ส่งข้อมูล
+      connection?.output.add(byteOut);
+      await connection?.output.allSent;
+
+      print("Sent Activate Now command (after Connect)");
+    } catch (e) {
+      print("Error sending Activate Now sequence: $e");
+      throw e;
     }
-    
-    // ตั้งค่าข้อมูล
-    byteOut[0] = 0xA1;
-    byteOut[1] = 0x11;
-    byteOut[2] = 0xF1;
-    byteOut[3] = 0x02; // ต่างจาก Activate Connect ตรงนี้
-    
-    // คำนวณ checksum
-    int chksum = 0;
-    for (int i = 0; i < 62; i++) {
-      chksum = chksum + byteOut[i];
-    }
-    byteOut[62] = chksum & 0xFF;
-    byteOut[63] = 0xE1;
-    
-    // ส่งข้อมูล
-    connection?.output.add(byteOut);
-    connection?.output.allSent;
-    
-    print("Sent Activate Now command");
   }
 
   Future<void> disconnect() async {

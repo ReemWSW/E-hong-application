@@ -30,7 +30,6 @@ class SessionService extends GetxController {
     
     // ตั้งค่า Timer หลักสำหรับ Auto Logout
     _sessionTimer = Timer(Duration(minutes: sessionTimeoutMinutes), () {
-    // _sessionTimer = Timer(Duration(days: sessionTimeoutMinutes), () {
       _performAutoLogout();
     });
     
@@ -156,7 +155,7 @@ class SessionService extends GetxController {
         duration: Duration(seconds: 4),
         icon: Icon(Icons.logout, color: Colors.white),
       );
-      
+      resetSession(); // รีเซ็ต session หลัง logout
       authController.logout();
     } catch (e) {
       print("Error during auto logout: $e");

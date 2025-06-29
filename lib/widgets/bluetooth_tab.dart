@@ -5,13 +5,14 @@ import '../controllers/bluetooth_controller.dart';
 import '../services/session_service.dart';
 import '../widgets/device_tile.dart';
 
+
 class BluetoothTab extends StatelessWidget {
   final BluetoothController btController;
 
   const BluetoothTab({
-    Key? key,
+    super.key,
     required this.btController,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +31,7 @@ class BluetoothTab extends StatelessWidget {
     });
   }
 
+  // เหมือนเดิม...
   Widget _buildConnectingView() {
     return Center(
       child: Column(
@@ -37,7 +39,7 @@ class BluetoothTab extends StatelessWidget {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text("🔄 กำลังเชื่อมต่ออุปกรณ์ล่าสุด..."),
+          Text("🔄 กำลังค้นหาอุปกรณ์..."),
         ],
       ),
     );
@@ -133,7 +135,12 @@ class BluetoothTab extends StatelessWidget {
   Widget _buildDeviceListView(SessionService sessionService) {
     return Column(
       children: [
-        _buildSearchHeader(sessionService),
+        // ถ้ายังไม่เริ่มค้นหาและไม่มีอุปกรณ์ ให้แสดงปุ่มเริ่มค้นหา
+        if (btController.devices.isEmpty && !btController.isConnecting.value)
+          _buildStartScanButton(sessionService)
+        else
+          _buildSearchHeader(sessionService),
+        
         Expanded(
           child: btController.devices.isEmpty
               ? _buildEmptyDeviceList(sessionService)
@@ -143,6 +150,63 @@ class BluetoothTab extends StatelessWidget {
     );
   }
 
+  // เพิ่ม widget สำหรับปุ่มเริ่มค้นหา
+  Widget _buildStartScanButton(SessionService sessionService) {
+    return Container(
+      margin: EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Icon(
+            Icons.bluetooth_searching,
+            size: 64,
+            color: Colors.blue[600],
+          ),
+          SizedBox(height: 20),
+          Text(
+            "ค้นหาอุปกรณ์ Bluetooth",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "กดปุ่มด้านล่างเพื่อเริ่มค้นหาอุปกรณ์ที่ใกล้เคียง",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                btController.startScan();
+                sessionService.extendSession();
+              },
+              icon: Icon(Icons.search),
+              label: Text(
+                "เริ่มค้นหาอุปกรณ์",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
   Widget _buildSearchHeader(SessionService sessionService) {
     return Container(
       padding: EdgeInsets.all(16),

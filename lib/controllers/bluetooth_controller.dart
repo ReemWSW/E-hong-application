@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:math';
 
 import 'package:e_hong_app/services/system_check_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_blue_classic/flutter_blue_classic.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bluetooth_service.dart'; // เพิ่มการ import BluetoothService
 
 class BluetoothController extends GetxController {
@@ -24,7 +22,6 @@ class BluetoothController extends GetxController {
   var lastCommandSent = 0.obs;
   var isWaitingResponse = false.obs;
 
-  // เอา BluetoothConnection ออกเพราะใช้ผ่าน service แล้ว
   StreamSubscription<Uint8List>? _dataSubscription;
   StreamSubscription<BluetoothDevice>? _scanSubscription;
   Timer? _responseTimeout;
@@ -33,7 +30,6 @@ class BluetoothController extends GetxController {
   void onInit() {
     super.onInit();
     ensureBluetoothOnThenScan();
-    autoReconnect();
      _initializeSystem();
   }
 
@@ -51,24 +47,12 @@ class BluetoothController extends GetxController {
     
     if (systemReady) {
       await ensureBluetoothOnThenScan();
-      await autoReconnect();
     } else {
       systemCheck.showSystemNotReadyDialog();
     }
   }
 
 
-  Future<void> autoReconnect() async {
-    String? lastAddress = await getLastConnectedDeviceAddress();
-
-    if (lastAddress != null) {
-      final bonded = await bluetooth.bondedDevices;
-      final device = bonded?.firstWhereOrNull((d) => d.address == lastAddress);
-      if (device != null) {
-        connectToDevice(device);
-      }
-    }
-  }
 
   Future<void> ensureBluetoothOnThenScan() async {
     await requestPermissions();
@@ -169,17 +153,10 @@ class BluetoothController extends GetxController {
     }
 
     try {
-      bluetoothService.sendCmdActivateNow();
+   await   bluetoothService.sendCmdActivateNow();
       
-      Get.snackbar(
-        "⚡ Activate Now สำเร็จ",
-        "ส่งคำสั่ง Activate Now เรียบร้อยแล้ว",
-        backgroundColor: Colors.orange.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: Duration(seconds: 2),
-        snackPosition: SnackPosition.BOTTOM,
-      );
     } catch (e) {
+      print("Error sending Activate Now command: $e");
       Get.snackbar(
         "❌ เกิดข้อผิดพลาด",
         "ไม่สามารถส่งคำสั่ง Activate Now ได้: $e",
@@ -196,45 +173,40 @@ class BluetoothController extends GetxController {
     _responseTimeout?.cancel();
   }
 
-  void forceActivateResponse() {
-    isConnectResponseReceived.value = true;
-    canActivate.value = true;
-    resetWaitingState();
-
-    Get.snackbar(
-      "⚠️ บังคับเปิดใช้งาน",
-      "✅ บังคับให้ปุ่ม Activate Now ใช้งานได้\n(สำหรับการทดสอบ)",
-      backgroundColor: Colors.amber.withOpacity(0.8),
-      colorText: Colors.white,
-      duration: Duration(seconds: 3),
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
-
   Future<void> disconnect() async {
+  try {
+    // Cancel subscriptions ก่อน
     _dataSubscription?.cancel();
     _scanSubscription?.cancel();
     _responseTimeout?.cancel();
+    
+    // Reset states ทันที (UI จะอัปเดตทันที)
     isWaitingResponse.value = false;
     isConnectResponseReceived.value = false;
     canActivate.value = false;
     lastCommandSent.value = 0;
-
-    await bluetoothService.disconnect(); // ใช้ service แทน
     isConnected.value = false;
     selectedDevice.value = null;
-    await startScan();
+    
+    // Disconnect จาก service
+    await bluetoothService.disconnect();
+    
+    // รอให้ UI อัปเดตก่อน แล้วค่อยเริ่ม scan อัตโนมัติ
+    Future.delayed(Duration(milliseconds: 500), () {
+      startScan();
+    });
+    
+  } catch (e) {
+    print("Error during disconnect: $e");
+    
+    // แม้เกิด error ก็ให้ reset state
+    isConnected.value = false;
+    selectedDevice.value = null;
+    isConnectResponseReceived.value = false;
+    canActivate.value = false;
   }
+}
 
-  Future<void> saveLastConnectedDevice(String address) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('last_device', address);
-  }
-
-  Future<String?> getLastConnectedDeviceAddress() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('last_device');
-  }
 
   void connectToDevice(BluetoothDevice device) async {
     // ตรวจสอบระบบก่อนเชื่อมต่อ
@@ -258,35 +230,16 @@ class BluetoothController extends GetxController {
         isConnectResponseReceived.value = false;
         canActivate.value = false;
 
-        await saveLastConnectedDevice(device.address);
-
-        Get.snackbar(
-          "✅ เชื่อมต่อสำเร็จ",
-          "เชื่อมต่อกับ ${device.name ?? 'Unknown'} สำเร็จแล้ว\nและส่งคำสั่ง Activate Connect อัตโนมัติ",
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 3),
-          snackPosition: SnackPosition.BOTTOM,
-        );
 
         Timer(Duration(seconds: 2), () {
           if (isConnected.value) {
             isConnectResponseReceived.value = true;
             canActivate.value = true;
-            
-            Get.snackbar(
-              "✅ Activate Connect สำเร็จ",
-              "🔌 พร้อมใช้งานปุ่ม Activate Now แล้ว",
-              backgroundColor: Colors.green.withOpacity(0.8),
-              colorText: Colors.white,
-              duration: Duration(seconds: 2),
-              snackPosition: SnackPosition.BOTTOM,
-            );
           }
         });
         
       } else {
-        throw Exception("ไม่สามารถสร้างการเชื่อมต่อได้");
+        throw "ไม่สามารถสร้างการเชื่อมต่อได้";
       }
     } catch (e) {
       print("Connection error: $e");
@@ -315,26 +268,4 @@ class BluetoothController extends GetxController {
     }
   }
 
-  // แก้ไข method activateConnect ให้เป็นแค่การแสดงสถานะ
-  void activateConnect() {
-    if (isConnectResponseReceived.value) {
-      Get.snackbar(
-        "ℹ️ Activate Connect",
-        "✅ คำสั่ง Activate Connect ถูกส่งไปแล้วตอนเชื่อมต่ออุปกรณ์",
-        backgroundColor: Colors.blue.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: Duration(seconds: 2),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } else {
-      Get.snackbar(
-        "⚠️ Activate Connect",
-        "❌ ยังไม่ได้ส่งคำสั่ง Activate Connect\nกรุณาเชื่อมต่ออุปกรณ์ใหม่",
-        backgroundColor: Colors.orange.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
 }
