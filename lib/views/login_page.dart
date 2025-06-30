@@ -11,14 +11,16 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  final employeeNoController = TextEditingController(text: "61030243");
-  final passwordController = TextEditingController(text: "123456789");
+  final employeeNoController = TextEditingController();
+  final passwordController = TextEditingController();
   final companyController = TextEditingController();
+  final employeeNameController = TextEditingController();
   final AuthController authController = Get.find();
 
   String? employeeNoError;
   String? passwordError;
   String? companyError;
+  String? employeeNameError;
   bool _obscureText = true;
   bool _isRegisterMode = false;
 
@@ -63,6 +65,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     employeeNoController.dispose();
     passwordController.dispose();
     companyController.dispose();
+    companyController.dispose();
     super.dispose();
   }
 
@@ -71,11 +74,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       employeeNoError = null;
       passwordError = null;
       companyError = null;
+      employeeNameError = null;
     });
 
     final employeeNo = employeeNoController.text.trim();
     final password = passwordController.text.trim();
     final company = companyController.text.trim();
+    final employeeName = companyController.text.trim();
 
     bool hasError = false;
 
@@ -87,6 +92,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     // ตรวจสอบ company เฉพาะตอนสมัคร
     if (_isRegisterMode && company.isEmpty) {
       companyError = "กรุณากรอกชื่อบริษัท";
+      hasError = true;
+    }
+
+    // ตรวจสอบชื่อพนักงาน (เฉพาะตอนสมัคร)
+    if (_isRegisterMode && employeeName.isEmpty) {
+      employeeNameError = "กรุณากรอกชื่อพนักงาน";
       hasError = true;
     }
 
@@ -111,6 +122,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     if (validate()) {
       authController.register(
         employeeNo: employeeNoController.text.trim(),
+        employeeName: employeeNameController.text.trim(),
         password: passwordController.text.trim(),
         company: companyController.text.trim(),
       );
@@ -281,6 +293,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               icon: Icons.badge,
                               errorText: employeeNoError,
                             ),
+                            
+                            // Form Section
+                            if (_isRegisterMode)
+                              _buildTextField(
+                                controller: employeeNameController,
+                                label: "ชื่อพนักงาน",
+                                icon: Icons.badge,
+                                errorText: employeeNameError,
+                              ),
 
                             // Company field - แสดงเฉพาะตอนสมัคร
                             if (_isRegisterMode)

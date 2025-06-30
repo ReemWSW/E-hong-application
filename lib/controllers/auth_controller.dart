@@ -230,6 +230,7 @@ class AuthController extends GetxController {
 
   Future<void> register({
     required String employeeNo,
+    required String employeeName,
     required String password,
     required String company,
   }) async {
@@ -243,6 +244,7 @@ class AuthController extends GetxController {
 
       UserModel? user = await _firebaseService.registerEmployee(
         employeeNo: employeeNo,
+        employeeName: employeeName,
         password: password,
         company: company,
       );

@@ -6,6 +6,7 @@ import 'dart:convert';
 class UserModel {
   final String? id;
   final String employeeNo;
+  final String? employeeName;
   final String company;
   final String passwordHash; // เก็บ password ที่เข้ารหัสแล้ว
   final DateTime? createdAt;
@@ -16,6 +17,7 @@ class UserModel {
     required this.employeeNo,
     required this.company,
     required this.passwordHash,
+    this.employeeName,
     this.createdAt,
     this.lastLogin,
   });
@@ -31,6 +33,7 @@ class UserModel {
     return UserModel(
       id: id,
       employeeNo: map['employeeNo'] ?? '',
+      employeeName: map['employeeName'], 
       company: map['company'] ?? '',
       passwordHash: map['passwordHash'] ?? '',
       createdAt: map['createdAt']?.toDate(),
@@ -41,6 +44,7 @@ class UserModel {
   Map<String, dynamic> toMap() {
     return {
       'employeeNo': employeeNo,
+      'employeeName': employeeName,
       'company': company,
       'passwordHash': passwordHash,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
@@ -48,14 +52,15 @@ class UserModel {
     };
   }
 
-  // สร้าง UserModel ใหม่พร้อม password hash
   factory UserModel.create({
     required String employeeNo,
+    required String employeeName,
     required String password,
     required String company,
   }) {
     return UserModel(
       employeeNo: employeeNo,
+      employeeName: employeeName,
       company: company,
       passwordHash: hashPassword(password),
       createdAt: DateTime.now(),
@@ -67,11 +72,11 @@ class UserModel {
     return passwordHash == hashPassword(password);
   }
 
-  // อัปเดต last login
   UserModel copyWithLastLogin() {
     return UserModel(
       id: id,
       employeeNo: employeeNo,
+      employeeName: employeeName,
       company: company,
       passwordHash: passwordHash,
       createdAt: createdAt,

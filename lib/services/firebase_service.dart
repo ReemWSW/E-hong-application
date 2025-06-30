@@ -8,47 +8,49 @@ class FirebaseService {
 
   // ลงทะเบียนพนักงานใหม่
   Future<UserModel?> registerEmployee({
-    required String employeeNo,
-    required String password,
-    required String company,
-  }) async {
-    try {
-      // ตรวจสอบว่ามีพนักงานหมายเลขนี้ในบริษัทนี้แล้วหรือไม่
-      final existingUser = await _firestore
-          .collection('employees')
-          .where('employeeNo', isEqualTo: employeeNo)
-          .where('company', isEqualTo: company)
-          .get();
+  required String employeeNo,
+ required String employeeName, // เพิ่มพารามิเตอร์ชื่อพนักงาน
+  required String password,
+  required String company,
+}) async {
+  try {
+    // ตรวจสอบว่า employeeNo ซ้ำหรือไม่
+    final existingEmployee = await _firestore
+        .collection('employees')
+        .where('employeeNo', isEqualTo: employeeNo)
+        .limit(1)
+        .get();
 
-      if (existingUser.docs.isNotEmpty) {
-        throw Exception(
-          'พนักงานหมายเลข $employeeNo ในบริษัท $company มีอยู่แล้ว',
-        );
-      }
-
-      // สร้างพนักงานใหม่
-      UserModel newUser = UserModel.create(
-        employeeNo: employeeNo,
-        password: password,
-        company: company,
-      );
-
-      // บันทึกลง Firestore
-      DocumentReference docRef = await _firestore
-          .collection('employees')
-          .add(newUser.toMap());
-
-      // ดึงข้อมูลที่บันทึกแล้วมาคืน
-      DocumentSnapshot doc = await docRef.get();
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }
-
-      return null;
-    } catch (e) {
-      throw Exception('ลงทะเบียนไม่สำเร็จ: $e');
+    if (existingEmployee.docs.isNotEmpty) {
+      throw 'หมายเลขพนักงาน $employeeNo มีอยู่ในระบบแล้ว';
     }
+
+    // สร้าง UserModel ใหม่
+    UserModel newUser = UserModel.create(
+      employeeNo: employeeNo,
+      employeeName: employeeName,
+      company: company,
+      password: password,
+    );
+
+    // บันทึกลง Firestore
+    DocumentReference docRef = await _firestore
+        .collection('employees')
+        .add(newUser.toMap());
+
+    // ส่งกลับ UserModel พร้อม ID
+    return UserModel(
+      id: docRef.id,
+      employeeNo: newUser.employeeNo,
+      employeeName: newUser.employeeName,
+      company: newUser.company,
+      passwordHash: newUser.passwordHash,
+      lastLogin: newUser.lastLogin,
+    );
+  } catch (e) {
+    throw e.toString();
   }
+}
 
   // เข้าสู่ระบบ (ใช้เฉพาะ employeeNo + password)
   Future<UserModel?> loginEmployee({
