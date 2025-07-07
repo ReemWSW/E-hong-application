@@ -10,7 +10,7 @@ import '../widgets/bluetooth_tab.dart';
 
 class HomePage extends StatelessWidget {
   final AuthController authController = Get.find();
-  
+
   HomePage({super.key}) {
     // เพิ่มการ initialize SystemCheckService หากยังไม่มี
     if (!Get.isRegistered<SystemCheckService>()) {
@@ -36,17 +36,10 @@ class HomePage extends StatelessWidget {
           return Column(
             children: [
               // User Info Section
-              UserInfoSection(
-                user: user,
-                btController: btController,
-              ),
-              
+              UserInfoSection(user: user, btController: btController),
+
               // Bluetooth Tab
-              Expanded(
-                child: BluetoothTab(
-                  btController: btController,
-                ),
-              ),
+              Expanded(child: BluetoothTab(btController: btController)),
             ],
           );
         }),
@@ -56,11 +49,13 @@ class HomePage extends StatelessWidget {
 
   AppBar _buildAppBar(SessionService sessionService) {
     return AppBar(
-      title: Obx(() => Text(
-        authController.currentUser.value != null
-            ? "สวัสดี ${authController.currentUser.value!.fullName}"
-            : "หน้าหลัก",
-      )),
+      title: Obx(
+        () => Text(
+          authController.currentUser.value != null
+              ? "สวัสดี ${authController.currentUser.value!.fullName}"
+              : "หน้าหลัก",
+        ),
+      ),
       backgroundColor: Colors.blue[600],
       foregroundColor: Colors.white,
       actions: [
@@ -72,46 +67,48 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildTimerWidget(SessionService sessionService) {
-    return Obx(() => Padding(
-      padding: EdgeInsets.only(right: 8),
-      child: Center(
-        child: GestureDetector(
-          onTap: _showSessionDialog,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: sessionService.remainingTime.value <= 60
-                  ? Colors.red.withOpacity(0.2)
-                  : Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.timer,
-                  size: 16,
-                  color: sessionService.remainingTime.value <= 60
-                      ? Colors.red[200]
-                      : Colors.white,
-                ),
-                SizedBox(width: 4),
-                Text(
-                  sessionService.formattedRemainingTime,
-                  style: TextStyle(
-                    fontSize: 12,
+    return Obx(
+      () => Padding(
+        padding: EdgeInsets.only(right: 8),
+        child: Center(
+          child: GestureDetector(
+            onTap: _showSessionDialog,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: sessionService.remainingTime.value <= 60
+                    ? Colors.red.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer,
+                    size: 16,
                     color: sessionService.remainingTime.value <= 60
                         ? Colors.red[200]
                         : Colors.white,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-              ],
+                  SizedBox(width: 4),
+                  Text(
+                    sessionService.formattedRemainingTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: sessionService.remainingTime.value <= 60
+                          ? Colors.red[200]
+                          : Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   Widget _buildLogoutButton() {
@@ -124,19 +121,23 @@ class HomePage extends StatelessWidget {
 
   Widget _buildRefreshButton(SessionService sessionService) {
     final btController = Get.find<BluetoothController>();
-    
+
     return Obx(() {
       if (!btController.isConnected.value) {
         return IconButton(
           icon: Icon(Icons.refresh),
-          onPressed: () {
-            btController.startScan();
-            sessionService.extendSession();
-          },
           tooltip: "ค้นหาอุปกรณ์ Bluetooth",
+          onPressed: () async {
+            btController.stopScan(); 
+            await Future.delayed(
+              Duration(milliseconds: 300),
+            ); 
+            btController.startScan(); 
+            sessionService.extendSession(); 
+          },
         );
       }
-      return SizedBox.shrink();
+      return SizedBox.shrink(); // ถ้าเชื่อมแล้ว ซ่อนไป
     });
   }
 
@@ -152,32 +153,31 @@ class HomePage extends StatelessWidget {
             Text("การจัดการเซสชัน"),
           ],
         ),
-        content: Obx(() => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "เวลาที่เหลือ: ${sessionService.formattedRemainingTime}",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: sessionService.remainingTime.value <= 60
-                    ? Colors.red[600]
-                    : Colors.green[600],
+        content: Obx(
+          () => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "เวลาที่เหลือ: ${sessionService.formattedRemainingTime}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: sessionService.remainingTime.value <= 60
+                      ? Colors.red[600]
+                      : Colors.green[600],
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            Text(
-              "คุณจะถูกออกจากระบบอัตโนมัติเมื่อหมดเวลา\nกดปุ่มด้านล่างเพื่อต่ออายุการใช้งาน",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("ปิด"),
+              SizedBox(height: 16),
+              Text(
+                "คุณจะถูกออกจากระบบอัตโนมัติเมื่อหมดเวลา\nกดปุ่มด้านล่างเพื่อต่ออายุการใช้งาน",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
           ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text("ปิด")),
           ElevatedButton(
             onPressed: () {
               authController.extendUserSession();

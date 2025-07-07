@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_classic/flutter_blue_classic.dart';
 
 class BluetoothService {
@@ -11,12 +12,20 @@ class BluetoothService {
   }
 
   Future<void> connect(BluetoothDevice device) async {
-    connection = await _bluetooth.connect(device.address);
-
     // ส่งคำสั่ง Activate Connect ทันทีหลังจากเชื่อมต่อ
-    if (isConnected) {
-      await Future.delayed(Duration(milliseconds: 500)); // รอให้เชื่อมต่อเสถียร
-      sendCmdActivateConnect();
+    try {
+      connection = await _bluetooth.connect(device.address);
+      if (isConnected) {
+       
+        await Future.delayed(Duration(milliseconds: 500));
+        await sendCmdActivateConnect();
+         
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("❌ ไม่สามารถเชื่อมต่อ: $e");
+      }
+      rethrow;
     }
   }
 
@@ -96,10 +105,14 @@ class BluetoothService {
       connection?.output.add(byteOut);
       await connection?.output.allSent;
 
-      print("Sent Activate Now command (after Connect)");
+      if (kDebugMode) {
+        print("Sent Activate Now command (after Connect)");
+      }
     } catch (e) {
-      print("Error sending Activate Now sequence: $e");
-      throw e;
+      if (kDebugMode) {
+        print("Error sending Activate Now sequence: $e");
+      }
+      rethrow;
     }
   }
 
