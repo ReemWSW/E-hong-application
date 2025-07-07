@@ -28,6 +28,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _initializeAnimations();
+    _initialTextControllers();
+
+  }
+
+  void _initialTextControllers() {
+    employeeNoController.text = '67217';
+    passwordController.text = '1974';
+    employeeNoError = null;
+    passwordError = null;
   }
 
   void _initializeAnimations() {
