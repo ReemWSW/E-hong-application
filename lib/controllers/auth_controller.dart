@@ -185,7 +185,7 @@ class AuthController extends GetxController {
       Get.snackbar(
         "เข้าสู่ระบบสำเร็จ",
         "ยินดีต้อนรับ ${user.fullName} (${user.brId})",
-        backgroundColor: Colors.orange.withOpacity(0.8),
+        backgroundColor: Colors.green.withOpacity(0.8),
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
       );
