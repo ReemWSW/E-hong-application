@@ -1,5 +1,6 @@
 // lib/controllers/auth_controller.dart
 import 'package:e_hong_app/services/ehong_auth_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../views/login_page.dart';
@@ -191,6 +192,9 @@ class AuthController extends GetxController {
 
       Get.offAllNamed('/home');
     } catch (e) {
+      if (kDebugMode) {
+        print("Login error: $e");
+      }
       Get.snackbar(
         "เข้าสู่ระบบล้มเหลว",
         e.toString(),

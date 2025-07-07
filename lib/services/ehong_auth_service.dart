@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class EhongAuthService {
   final Dio _dio = Dio(BaseOptions(
@@ -44,9 +45,22 @@ class EhongAuthService {
       if (e.type == DioExceptionType.connectionTimeout) {
         throw 'การเชื่อมต่อหมดเวลา';
       } else if (e.response != null) {
-        throw 'ผิดพลาด: ${e.response?.statusCode} - ${e.response?.data}';
+        switch (e.response?.statusCode) {
+          case 401:
+               throw 'กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน';
+            case 404:
+              throw 'ไม่พบ URL ที่ร้องขอ';
+          default:
+        }
+        if (kDebugMode) {
+          print('Dio error: ${e.response?.data}');
+        }
+        throw 'ไม่สามารถเชื่อมต่อเครือข่ายได้';
       } else {
-        throw 'ข้อผิดพลาด: ${e.message}';
+        if (kDebugMode) {
+          print('Dio error: $e');
+        }
+        throw 'ไม่สามารถเชื่อมต่อเครือข่ายได้';
       }
     } catch (e) {
       throw 'ไม่สามารถเข้าสู่ระบบได้: $e';
