@@ -63,7 +63,9 @@ class BluetoothService {
     connection?.output.add(byteOut);
     connection?.output.allSent;
 
-    print("Sent Activate Connect command");
+    if (kDebugMode) {
+      print("Sent Activate Connect command");
+    }
   }
 
   // ส่งคำสั่ง Activate Now
@@ -72,14 +74,18 @@ class BluetoothService {
 
     try {
       // ส่งคำสั่ง Activate Connect ก่อน
-      print("Sending Activate Connect before Activate Now...");
+      if (kDebugMode) {
+        print("Sending Activate Connect before Activate Now...");
+      }
       await sendCmdActivateConnect();
 
       // รอสักครู่ให้คำสั่งแรกส่งเสร็จ
       await Future.delayed(Duration(milliseconds: 300));
 
       // ส่งคำสั่ง Activate Now
-      print("Sending Activate Now...");
+      if (kDebugMode) {
+        print("Sending Activate Now...");
+      }
       Uint8List byteOut = Uint8List(64);
 
       // เคลียร์ array
