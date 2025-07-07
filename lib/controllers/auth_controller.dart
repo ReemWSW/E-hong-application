@@ -1,8 +1,8 @@
 // lib/controllers/auth_controller.dart
+import 'package:e_hong_app/services/ehong_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../views/login_page.dart';
-import '../services/firebase_service.dart';
 import '../services/timestamp_service.dart';
 import '../services/location_service.dart';
 import '../services/session_service.dart';
@@ -13,9 +13,9 @@ import '../models/user_model.dart';
 class AuthController extends GetxController {
   static AuthController get to => Get.find();
 
-  final _firebaseService = FirebaseService();
+  final _ehongAuthService = EhongAuthService();
   final _timestampService = TimestampService();
-  Rxn<UserModel> currentUser = Rxn<UserModel>();
+  Rxn<EhongUserModel> currentUser = Rxn<EhongUserModel>();
   var isLoading = false.obs;
 
   @override
@@ -34,24 +34,18 @@ class AuthController extends GetxController {
       bool hasSession = await LocalStorageService.hasUserSession();
 
       if (hasSession) {
-        Map<String, String?> sessionData =
-            await LocalStorageService.getUserSession();
-        String? userId = sessionData['userId'];
+        final sessionData = await LocalStorageService.getUserSession();
 
-        if (userId != null) {
-          // ดึงข้อมูลผู้ใช้จาก Firestore
-          UserModel? user = await _firebaseService.getUserData(userId);
+        // แปลง session data จาก Map<String, String?> → EhongUserModel
+        final user = EhongUserModel.fromMap(sessionData);
+        currentUser.value = user;
 
-          if (user != null) {
-            currentUser.value = user;
-            _startSession();
-            Get.offAllNamed('/home');
-            return;
-          }
-        }
+        _startSession();
+        Get.offAllNamed('/home');
+        return;
       }
 
-      // ถ้าไม่มี session หรือข้อมูลไม่ถูกต้อง ให้ไปหน้า login
+      // ไม่มี session
       await LocalStorageService.clearUserSession();
       Get.offAll(() => LoginPage());
     } catch (e) {
@@ -159,179 +153,43 @@ class AuthController extends GetxController {
     );
   }
 
-  // เปิดระบบทีละตัว
-  Future<void> _enableSystemsSequentially(
-    SystemCheckService systemCheck,
-  ) async {
-    // แสดง loading
-    Get.dialog(
-      WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text("กำลังตั้งค่าระบบ..."),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-
-    try {
-      // เปิด Bluetooth ถ้ายังปิด
-      if (!systemCheck.isBluetoothEnabled.value) {
-        await systemCheck.enableBluetooth();
-        await Future.delayed(Duration(seconds: 1));
-      }
-
-      // เปิด GPS ถ้ายังปิด
-      if (!systemCheck.isLocationEnabled.value) {
-        await systemCheck.enableLocation();
-        await Future.delayed(Duration(seconds: 1));
-      }
-
-      // ตรวจสอบสถานะสุดท้าย
-      await systemCheck.checkSystemStatus();
-
-      Get.back(); // ปิด loading dialog
-
-      if (systemCheck.isSystemReady.value) {
-        Get.snackbar(
-          "✅ สำเร็จ",
-          "ระบบพร้อมใช้งานแล้ว สามารถเข้าสู่ระบบได้",
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
-      } else {
-        Get.snackbar(
-          "⚠️ แจ้งเตือน",
-          "กรุณาเปิดระบบที่เหลือด้วยตนเอง",
-          backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: Duration(seconds: 3),
-        );
-      }
-    } catch (e) {
-      Get.back(); // ปิด loading dialog
-      Get.snackbar(
-        "❌ ผิดพลาด",
-        "เกิดข้อผิดพลาดในการตั้งค่าระบบ",
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
-      );
-    }
-  }
-
-  Future<void> register({
-    required String employeeNo,
-    required String employeeName,
-    required String password,
-    required String company,
-  }) async {
-    // เช็คระบบก่อน register
-    if (!await _checkSystemReady()) {
-      return; // ถ้าระบบไม่พร้อมให้หยุด
-    }
-
-    try {
-      isLoading.value = true;
-
-      UserModel? user = await _firebaseService.registerEmployee(
-        employeeNo: employeeNo,
-        employeeName: employeeName,
-        password: password,
-        company: company,
-      );
-
-      if (user != null) {
-        currentUser.value = user;
-
-        // บันทึก session
-        await LocalStorageService.saveUserSession(
-          userId: user.id!,
-          employeeNo: user.employeeNo,
-          company: user.company,
-        );
-
-        // เริ่ม session timer
-        _startSession();
-
-        // Auto stamp time on successful login
-        await _timestampService.stampTime(user);
-
-        Get.snackbar(
-          "สำเร็จ",
-          "ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ${user.employeeNo}",
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-
-        Get.offAllNamed('/home');
-      }
-    } catch (e) {
-      Get.snackbar(
-        "ลงทะเบียนล้มเหลว",
-        e.toString(),
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   Future<void> login({
     required String employeeNo,
     required String password,
   }) async {
-    // เช็คระบบก่อน login
-    if (!await _checkSystemReady()) {
-      return; // ถ้าระบบไม่พร้อมให้หยุด
-    }
+    if (!await _checkSystemReady()) return;
 
     try {
       isLoading.value = true;
 
-      UserModel? user = await _firebaseService.loginEmployee(
-        employeeNo: employeeNo,
+      final userMap = await _ehongAuthService.login(
+        username: employeeNo,
         password: password,
       );
 
-      if (user != null) {
-        currentUser.value = user;
+      final user = EhongUserModel.fromMap(userMap);
+      currentUser.value = user;
 
-        // บันทึก session
-        await LocalStorageService.saveUserSession(
-          userId: user.id!,
-          employeeNo: user.employeeNo,
-          company: user.company,
-        );
+      // บันทึก session
+      await LocalStorageService.saveUserSession(
+        userId: user.empId,
+        employeeNo: user.barcode,
+        company: user.brId,
+      );
 
-        // เริ่ม session timer
-        _startSession();
+      _startSession();
 
-        // Auto stamp time on successful login
-        await _timestampService.stampTime(user);
+      await _timestampService.stampTime(user); // ← เปลี่ยนให้รับ EhongUserModel
 
-        Get.snackbar(
-          "เข้าสู่ระบบสำเร็จ",
-          "ยินดีต้อนรับ ${user.employeeNo} (${user.company})",
-          backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 4),
-        );
+      Get.snackbar(
+        "เข้าสู่ระบบสำเร็จ",
+        "ยินดีต้อนรับ ${user.fullName} (${user.brId})",
+        backgroundColor: Colors.orange.withOpacity(0.8),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
 
-        Get.offAllNamed('/home');
-      }
+      Get.offAllNamed('/home');
     } catch (e) {
       Get.snackbar(
         "เข้าสู่ระบบล้มเหลว",
@@ -373,8 +231,6 @@ class AuthController extends GetxController {
 
     try {
       isLoading.value = true;
-
-      // Extend session เมื่อมีการใช้งาน
       _extendSession();
 
       String? error = await _timestampService.stampTime(currentUser.value!);

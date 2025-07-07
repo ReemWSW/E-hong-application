@@ -58,7 +58,7 @@ class HomePage extends StatelessWidget {
     return AppBar(
       title: Obx(() => Text(
         authController.currentUser.value != null
-            ? "สวัสดี ${authController.currentUser.value!.employeeNo}"
+            ? "สวัสดี ${authController.currentUser.value!.fullName}"
             : "หน้าหลัก",
       )),
       backgroundColor: Colors.blue[600],

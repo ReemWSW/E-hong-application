@@ -1,14 +1,13 @@
-// lib/services/timestamp_service.dart
 import 'package:geolocator/geolocator.dart';
-import '../models/timestamp_model.dart';
 import '../models/user_model.dart';
+import '../models/timestamp_model.dart';
 import 'firebase_service.dart';
 import 'location_service.dart';
 
 class TimestampService {
   final FirebaseService _firebaseService = FirebaseService();
 
-  Future<String?> stampTime(UserModel user) async {
+  Future<String?> stampTime(EhongUserModel user) async {
     try {
       // Get current location
       Position? position = await LocationService.getCurrentLocation();
@@ -16,11 +15,11 @@ class TimestampService {
         return 'ไม่สามารถระบุตำแหน่งได้ กรุณาเปิด GPS และอนุญาตการเข้าถึงตำแหน่ง';
       }
 
-      // Create timestamp record
+      // สร้าง timestamp record โดยใช้ข้อมูลจาก EhongUserModel
       TimestampModel timestamp = TimestampModel(
-        userId: user.id!,
-        employeeNo: user.employeeNo,
-        company: user.company,
+        userId: user.empId, // ใช้ empId หรือ barcode แทน userId
+        employeeNo: user.barcode,
+        company: user.brId, // ใช้ brId แทนชื่อบริษัท
         timestamp: DateTime.now(),
         latitude: position.latitude,
         longitude: position.longitude,

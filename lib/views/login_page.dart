@@ -13,16 +13,11 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final employeeNoController = TextEditingController();
   final passwordController = TextEditingController();
-  final companyController = TextEditingController();
-  final employeeNameController = TextEditingController();
   final AuthController authController = Get.find();
 
   String? employeeNoError;
   String? passwordError;
-  String? companyError;
-  String? employeeNameError;
   bool _obscureText = true;
-  bool _isRegisterMode = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -64,8 +59,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
     employeeNoController.dispose();
     passwordController.dispose();
-    companyController.dispose();
-    companyController.dispose();
     super.dispose();
   }
 
@@ -73,15 +66,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     setState(() {
       employeeNoError = null;
       passwordError = null;
-      companyError = null;
-      employeeNameError = null;
     });
 
     final employeeNo = employeeNoController.text.trim();
     final password = passwordController.text.trim();
-    final company = companyController.text.trim();
-    final employeeName = companyController.text.trim();
-
     bool hasError = false;
 
     if (employeeNo.isEmpty) {
@@ -89,19 +77,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       hasError = true;
     }
 
-    // ตรวจสอบ company เฉพาะตอนสมัคร
-    if (_isRegisterMode && company.isEmpty) {
-      companyError = "กรุณากรอกชื่อบริษัท";
-      hasError = true;
-    }
-
-    // ตรวจสอบชื่อพนักงาน (เฉพาะตอนสมัคร)
-    if (_isRegisterMode && employeeName.isEmpty) {
-      employeeNameError = "กรุณากรอกชื่อพนักงาน";
-      hasError = true;
-    }
-
-    if (password.length < 6) {
+    if (password.length < 4) {
       passwordError = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
       hasError = true;
     }
@@ -118,17 +94,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
   }
 
-  void validateAndRegister() {
-    if (validate()) {
-      authController.register(
-        employeeNo: employeeNoController.text.trim(),
-        employeeName: employeeNameController.text.trim(),
-        password: passwordController.text.trim(),
-        company: companyController.text.trim(),
-      );
-    }
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -136,13 +101,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     String? errorText,
     bool obscureText = false,
     Widget? suffixIcon,
-    String? initialValue, // เพิ่มพารามิเตอร์นี้
   }) {
-    // ถ้ามี initialValue ให้ใส่เข้า controller
-    if (initialValue != null && controller.text.isEmpty) {
-      controller.text = initialValue;
-    }
-
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       child: TextFormField(
@@ -189,7 +148,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     required Color color,
     required IconData icon,
   }) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton.icon(
@@ -256,14 +215,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   'assets/logo.png',
                                   width: 80,
                                   height: 80,
-                                  fit: BoxFit
-                                      .contain, // ปรับให้รูปอยู่ในขนาดที่กำหนดโดยไม่บิดเบือน
+                                  fit: BoxFit.contain,
                                 ),
                                 SizedBox(height: 24),
                                 Text(
-                                  _isRegisterMode
-                                      ? "ลงทะเบียนพนักงาน"
-                                      : "เข้าสู่ระบบ",
+                                  "เข้าสู่ระบบ",
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -272,9 +228,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  _isRegisterMode
-                                      ? "สร้างบัญชีพนักงานใหม่"
-                                      : "เข้าสู่ระบบเพื่อใช้งานอุปกรณ์",
+                                  "เข้าสู่ระบบเพื่อใช้งานอุปกรณ์",
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -286,31 +240,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                             SizedBox(height: 32),
 
-                            // Form Section
+                            // Form
                             _buildTextField(
                               controller: employeeNoController,
                               label: "หมายเลขพนักงาน",
                               icon: Icons.badge,
                               errorText: employeeNoError,
                             ),
-                            
-                            // Form Section
-                            if (_isRegisterMode)
-                              _buildTextField(
-                                controller: employeeNameController,
-                                label: "ชื่อพนักงาน",
-                                icon: Icons.badge,
-                                errorText: employeeNameError,
-                              ),
-
-                            // Company field - แสดงเฉพาะตอนสมัคร
-                            if (_isRegisterMode)
-                              _buildTextField(
-                                controller: companyController,
-                                label: "ชื่อบริษัท",
-                                icon: Icons.business,
-                                errorText: companyError,
-                              ),
 
                             _buildTextField(
                               controller: passwordController,
@@ -335,136 +271,56 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                             SizedBox(height: 8),
 
-                            // Primary Action Button
+                            // Login Button
                             Obx(
                               () => _buildPrimaryButton(
                                 text: authController.isLoading.value
                                     ? "กำลังดำเนินการ..."
-                                    : _isRegisterMode
-                                    ? "ลงทะเบียน"
                                     : "เข้าสู่ระบบ",
                                 onPressed: authController.isLoading.value
                                     ? null
-                                    : _isRegisterMode
-                                    ? validateAndRegister
                                     : validateAndLogin,
-                                color: _isRegisterMode
-                                    ? Colors.green[600]!
-                                    : Colors.blue[600]!,
+                                color: Colors.blue[600]!,
                                 icon: authController.isLoading.value
                                     ? Icons.hourglass_empty
-                                    : _isRegisterMode
-                                    ? Icons.person_add
                                     : Icons.login,
                               ),
                             ),
 
-                            if (!_isRegisterMode) ...[
-                              SizedBox(height: 12),
-                              Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.blue.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: Colors.blue[600],
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        "เข้าสู่ระบบจะบันทึกเวลาและตำแหน่งอัตโนมัติ",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.blue[700],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                            SizedBox(height: 12),
+
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.3),
                                 ),
                               ),
-                            ],
-
-                            SizedBox(height: 16),
-
-                            // Divider
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Divider(color: Colors.grey[300]),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    "หรือ",
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.blue[600],
+                                    size: 20,
                                   ),
-                                ),
-                                Expanded(
-                                  child: Divider(color: Colors.grey[300]),
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: 16),
-
-                            // Switch Mode Button
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isRegisterMode = !_isRegisterMode;
-                                  employeeNoError = null;
-                                  passwordError = null;
-                                  companyError = null;
-                                  // ล้างค่า company เมื่อเปลี่ยนไป login mode
-                                  if (!_isRegisterMode) {
-                                    companyController.clear();
-                                  }
-                                });
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(fontSize: 14),
-                                  children: [
-                                    TextSpan(
-                                      text: _isRegisterMode
-                                          ? "มีบัญชีอยู่แล้ว? "
-                                          : "ยังไม่มีบัญชี? ",
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    TextSpan(
-                                      text: _isRegisterMode
-                                          ? "เข้าสู่ระบบ"
-                                          : "ลงทะเบียน",
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "เข้าสู่ระบบจะบันทึกเวลาและตำแหน่งอัตโนมัติ",
                                       style: TextStyle(
-                                        color: Colors.blue[600],
-                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                        color: Colors.blue[700],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
 
                             SizedBox(height: 16),
 
-                            // Footer
                             Text(
                               "โดยการใช้งานแอปนี้ คุณยอมรับ\nข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว",
                               style: TextStyle(

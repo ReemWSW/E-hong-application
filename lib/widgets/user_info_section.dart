@@ -5,7 +5,7 @@ import '../models/user_model.dart';
 import '../controllers/bluetooth_controller.dart';
 
 class UserInfoSection extends StatelessWidget {
-  final UserModel user;
+  final EhongUserModel user;
   final BluetoothController btController;
 
   const UserInfoSection({
@@ -39,20 +39,14 @@ class UserInfoSection extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Text(
-            "พนักงาน: ${user.employeeNo}",
+            "พนักงาน: ${user.fullName}",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          Text(
-            "บริษัท: ${user.company}",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
+         
           SizedBox(height: 12),
           // แสดงสถานะ Bluetooth
           Container(
