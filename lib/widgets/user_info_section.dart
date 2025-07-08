@@ -9,10 +9,10 @@ class UserInfoSection extends StatelessWidget {
   final BluetoothController btController;
 
   const UserInfoSection({
-    Key? key,
+    super.key,
     required this.user,
     required this.btController,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
