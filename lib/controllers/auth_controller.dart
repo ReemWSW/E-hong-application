@@ -9,6 +9,7 @@ import '../services/location_service.dart';
 import '../services/session_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/system_check_service.dart'; // เพิ่มการ import
+import '../services/expire_check_service.dart';
 import '../models/user_model.dart';
 
 class AuthController extends GetxController {
@@ -16,6 +17,7 @@ class AuthController extends GetxController {
 
   final _ehongAuthService = EhongAuthService();
   final _timestampService = TimestampService();
+  final _expireCheckService = ExpireCheckService();
   Rxn<EhongUserModel> currentUser = Rxn<EhongUserModel>();
   var isLoading = false.obs;
 
@@ -81,6 +83,55 @@ class AuthController extends GetxController {
       print("Error checking system: $e");
       return false;
     }
+  }
+
+  // แสดง dialog เตือนแอปหมดอายุ
+  void _showExpiredDialog() {
+    Get.dialog(
+      WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error, color: Colors.red[600]),
+              SizedBox(width: 8),
+              Text("แอปพลิเคชันหมดอายุ"),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "แอปพลิเคชันนี้ได้หมดอายุการใช้งานแล้ว",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "กรุณาต่ออายุการใช้งาน",
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text("ปิด"),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 
   // แสดง dialog เตือนระบบไม่พร้อม
@@ -162,6 +213,13 @@ class AuthController extends GetxController {
 
     try {
       isLoading.value = true;
+
+      // Check if app is expired before proceeding with login
+      final isNotExpired = await _expireCheckService.checkExpiration();
+      if (!isNotExpired) {
+        _showExpiredDialog();
+        return;
+      }
 
       final userMap = await _ehongAuthService.login(
         username: employeeNo,
